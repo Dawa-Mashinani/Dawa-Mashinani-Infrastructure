@@ -1,0 +1,7 @@
+project_id = "vqckqklspuikiehamoij"
+
+[functions.ussd-webhook]
+verify_jwt = false
+
+[functions.api-gateway]
+verify_jwt = false
