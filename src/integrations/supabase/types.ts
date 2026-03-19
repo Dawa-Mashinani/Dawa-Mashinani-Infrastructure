@@ -26,6 +26,11 @@ export type Database = {
           status: string
           symptom: string
           updated_at: string
+          alert_type: string
+          patient_id: string | null
+          responded_by: string | null
+          response_notes: string | null
+          responded_at: string | null
         }
         Insert: {
           created_at?: string
@@ -38,6 +43,11 @@ export type Database = {
           status?: string
           symptom: string
           updated_at?: string
+          alert_type?: string
+          patient_id?: string | null
+          responded_by?: string | null
+          response_notes?: string | null
+          responded_at?: string | null
         }
         Update: {
           created_at?: string
@@ -50,8 +60,198 @@ export type Database = {
           status?: string
           symptom?: string
           updated_at?: string
+          alert_type?: string
+          patient_id?: string | null
+          responded_by?: string | null
+          response_notes?: string | null
+          responded_at?: string | null
         }
         Relationships: []
+      }
+      jirani_network: {
+        Row: {
+          id: string
+          patient_id: string
+          contact_name: string
+          contact_phone: string
+          contact_type: string
+          priority: number
+          location: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          contact_name: string
+          contact_phone: string
+          contact_type: string
+          priority?: number
+          location?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          contact_name?: string
+          contact_phone?: string
+          contact_type?: string
+          priority?: number
+          location?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jirani_network_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      afya_id_tokens: {
+        Row: {
+          id: string
+          patient_id: string
+          pin_code: string
+          expires_at: string
+          is_revoked: boolean
+          used_by_doctor: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          pin_code: string
+          expires_at: string
+          is_revoked?: boolean
+          used_by_doctor?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          pin_code?: string
+          expires_at?: string
+          is_revoked?: boolean
+          used_by_doctor?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "afya_id_tokens_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_log: {
+        Row: {
+          id: string
+          alert_id: string | null
+          recipient_phone: string
+          recipient_name: string | null
+          notification_type: string
+          message_content: string | null
+          status: string
+          provider_response: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          alert_id?: string | null
+          recipient_phone: string
+          recipient_name?: string | null
+          notification_type: string
+          message_content?: string | null
+          status?: string
+          provider_response?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          alert_id?: string | null
+          recipient_phone?: string
+          recipient_name?: string | null
+          notification_type?: string
+          message_content?: string | null
+          status?: string
+          provider_response?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clinical_vitals: {
+        Row: {
+          id: string
+          patient_id: string
+          bp_systolic: number | null
+          bp_diastolic: number | null
+          weight_kg: number | null
+          height_cm: number | null
+          pulse: number | null
+          temperature: number | null
+          blood_sugar: number | null
+          oxygen_saturation: number | null
+          recorded_by: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          bp_systolic?: number | null
+          bp_diastolic?: number | null
+          weight_kg?: number | null
+          height_cm?: number | null
+          pulse?: number | null
+          temperature?: number | null
+          blood_sugar?: number | null
+          oxygen_saturation?: number | null
+          recorded_by?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          bp_systolic?: number | null
+          bp_diastolic?: number | null
+          weight_kg?: number | null
+          height_cm?: number | null
+          pulse?: number | null
+          temperature?: number | null
+          blood_sugar?: number | null
+          oxygen_saturation?: number | null
+          recorded_by?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_vitals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       health_records: {
         Row: {
@@ -106,6 +306,10 @@ export type Database = {
           phone: string
           updated_at: string
           upi: string
+          sha_no: string | null
+          ward: string | null
+          nid: string | null
+          language_pref: string | null
         }
         Insert: {
           age?: number | null
@@ -118,6 +322,10 @@ export type Database = {
           phone: string
           updated_at?: string
           upi: string
+          sha_no?: string | null
+          ward?: string | null
+          nid?: string | null
+          language_pref?: string | null
         }
         Update: {
           age?: number | null
@@ -130,6 +338,10 @@ export type Database = {
           phone?: string
           updated_at?: string
           upi?: string
+          sha_no?: string | null
+          ward?: string | null
+          nid?: string | null
+          language_pref?: string | null
         }
         Relationships: []
       }

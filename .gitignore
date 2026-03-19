@@ -24,5 +24,8 @@ dist-ssr
 *.sw?
 
  # Local env files (do NOT commit secrets)
- .env
+.env
 
+
+# Supabase temp
+supabase/.temp/

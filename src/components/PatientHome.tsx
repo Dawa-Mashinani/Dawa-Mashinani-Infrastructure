@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, User, Stethoscope, Send, FileText, Clock, CheckCircle2, TrendingUp, Zap } from 'lucide-react';
+import { AlertTriangle, User, Stethoscope, Send, FileText, Clock, CheckCircle2, TrendingUp, Zap, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { MockUser, RAFIKI_RESPONSES } from '@/lib/store';
+import { MockUser } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
+import { askRafikiAI } from '@/lib/api';
 import BottomNav from './BottomNav';
+import { useMsaidizi } from '@/components/msaidizi/MsaidiziProvider';
 
 interface PatientHomeProps {
   user: MockUser;
@@ -13,11 +15,84 @@ interface PatientHomeProps {
 const PatientHome = ({ user, onLogout }: PatientHomeProps) => {
   const [activeTab, setActiveTab] = useState('home');
   const [chatMessages, setChatMessages] = useState<{ from: string; text: string }[]>([
-    { from: 'rafiki', text: RAFIKI_RESPONSES['default'] },
+    { from: 'rafiki', text: 'I am Rafiki, your AI health companion powered by Gemini. I can help with symptom assessment, medication guidance, and connecting you to healthcare professionals. What symptoms are you experiencing?' },
   ]);
   const [chatInput, setChatInput] = useState('');
-  const [records, setRecords] = useState<any[]>([]);
+  const [records, setRecords] = useState<{ id: string; resource_type: string; code: string; value: string; sha256_hash: string; recorded_at: string }[]>([]);
+  const [isAiThinking, setIsAiThinking] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState(false);
+
+  const { speak, currentStep, tourActive, nextStep, startTour, endTour, setTotalSteps, setActiveView, setActiveRole } = useMsaidizi();
+
+  // Sync active view for context-aware MsaidiziGuide
+  useEffect(() => {
+    setActiveRole('patient');
+    setActiveView(activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    // Start Patient Tour
+    const t1 = setTimeout(() => {
+      setTotalSteps(6);
+      startTour();
+    }, 1500);
+
+    return () => clearTimeout(t1);
+  }, []);
+
+  useEffect(() => {
+    if (!tourActive) return;
+
+    let timeoutId: number;
+
+    if (currentStep === 1) {
+      speak(
+        `Jambo ${user.name.split(' ')[0]}! Welcome to Dawa Mashinani. I am Msaidizi, your personal guide. Let me walk you through your dashboard.`,
+        `Jambo ${user.name.split(' ')[0]}! Karibu kwenye Dawa Mashinani. Mimi ni Msaidizi, kiongozi wako. Wacha nikuonyeshe dashibodi yako.`,
+        8000
+      );
+      timeoutId = window.setTimeout(() => nextStep(), 9000);
+    } else if (currentStep === 2) {
+      speak(
+        "This is Rafiki AI — your personal health assistant. You can chat with Rafiki anytime to check your symptoms, ask health questions, and get quick medical advice. Try it out!",
+        "Huyu ni Rafiki AI — msaidizi wako wa afya. Unaweza kuzungumza naye wakati wowote kuangalia dalili, kuuliza maswali, na kupata ushauri wa haraka. Jaribu!",
+        12000
+      );
+      timeoutId = window.setTimeout(() => nextStep(), 13000);
+    } else if (currentStep === 3) {
+      speak(
+        "Next is Jirani — it connects you with nearby Community Health Promoters and local clinics. All your health records from field visits appear here, secured with SHA-256 encryption.",
+        "Ifuatayo ni Jirani — inakuunganisha na Wahudumu wa Afya wa Kijijini na zahanati zilizo karibu. Rekodi zako zote za afya zinaonekana hapa, zilizolindwa na SHA-256.",
+        12000
+      );
+      timeoutId = window.setTimeout(() => nextStep(), 13000);
+    } else if (currentStep === 4) {
+      speak(
+        "This is Mlinzi — your secure digital health wallet. It stores your Afya ID, shows your health score, and gives you personalized health recommendations to stay on track.",
+        "Hii ni Mlinzi — mkoba wako salama wa afya. Inahifadhi Kitambulisho chako cha Afya, inaonyesha alama yako ya afya, na inakupa mapendekezo ya kibinafsi.",
+        12000
+      );
+      timeoutId = window.setTimeout(() => nextStep(), 13000);
+    } else if (currentStep === 5) {
+      speak(
+        "Finally, the More tab — here you can view your profile, manage privacy settings, change language, or switch your role and log out of the system.",
+        "Mwishowe, kitufe cha Zaidi — hapa unaweza kuona wasifu wako, kudhibiti faragha, kubadilisha lugha, au kubadilisha jukumu na kutoka.",
+        12000
+      );
+      timeoutId = window.setTimeout(() => nextStep(), 13000);
+    } else if (currentStep === 6) {
+      speak(
+        "You are all set! Explore the tabs below and tap my icon anytime you need help. Let's improve your health journey together! 🎉",
+        "Uko tayari! Chunguza vitufe hapa chini na ubonyeze ikoni yangu wakati wowote unahitaji msaada. Tuboreshe safari yako ya afya pamoja! 🎉",
+        8000
+      );
+      timeoutId = window.setTimeout(() => endTour(), 9000);
+    }
+
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [currentStep, tourActive]);
 
   // Load health records from DB
   useEffect(() => {
@@ -49,24 +124,35 @@ const PatientHome = ({ user, onLogout }: PatientHomeProps) => {
     }
   }, [activeTab, user.phone]);
 
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
-    const input = chatInput.toLowerCase();
-    setChatMessages((prev) => [...prev, { from: 'user', text: chatInput }]);
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || isAiThinking) return;
+    const userText = chatInput;
+    const updatedMessages = [...chatMessages, { from: 'user', text: userText }];
+    setChatMessages(updatedMessages);
     setChatInput('');
+    setIsAiThinking(true);
 
-    setTimeout(() => {
-      const key = Object.keys(RAFIKI_RESPONSES).find((k) => input.includes(k)) || 'default';
-      setChatMessages((prev) => [...prev, { from: 'rafiki', text: RAFIKI_RESPONSES[key] }]);
-    }, 800);
+    try {
+      const { reply, severity } = await askRafikiAI(userText, updatedMessages);
+      setChatMessages((prev) => [...prev, { from: 'rafiki', text: reply }]);
+      // If critical/high severity, optionally show warning
+      if (severity === 'critical' || severity === 'high') {
+        console.log(`[RAFIKI] High severity detected: ${severity}`);
+      }
+    } catch (err) {
+      console.error('[RAFIKI] AI error:', err);
+      setChatMessages((prev) => [...prev, { from: 'rafiki', text: 'I\'m having trouble connecting right now. For urgent concerns, please dial 112 or visit your nearest health facility.' }]);
+    } finally {
+      setIsAiThinking(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <Stethoscope className="w-4 h-4 text-primary" />
+          <div className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden">
+            <img src="/Dawa-Mashinani-favicon.svg" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <span className="font-semibold text-foreground font-[Inter]">Dawa Mashinani</span>
         </div>
@@ -95,7 +181,7 @@ const PatientHome = ({ user, onLogout }: PatientHomeProps) => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-primary/15 rounded-2xl p-5"
+            className={`bg-primary/15 rounded-2xl p-5 transition-all duration-500 ${tourActive && currentStep === 2 ? 'ring-4 ring-primary ring-opacity-60 animate-pulse' : ''}`}
           >
             <div className="flex items-start justify-between">
               <div>
@@ -120,7 +206,7 @@ const PatientHome = ({ user, onLogout }: PatientHomeProps) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-card rounded-2xl p-4 border border-border"
+            className={`bg-card rounded-2xl p-4 border border-border transition-all duration-500 ${tourActive && currentStep === 4 ? 'ring-4 ring-primary ring-opacity-60 animate-pulse' : ''}`}
           >
             <p className="text-xs text-muted-foreground font-medium tracking-wide mb-2">DIGITAL AFYA ID</p>
             <div className="flex items-center justify-between">
@@ -156,19 +242,32 @@ const PatientHome = ({ user, onLogout }: PatientHomeProps) => {
                 </div>
               </div>
             ))}
+            {isAiThinking && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm bg-muted text-foreground rounded-bl-md flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span className="text-muted-foreground">Rafiki is thinking...</span>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="px-4 py-3 border-t border-border flex gap-2">
+          <div className={`px-4 py-3 border-t border-border flex gap-2 transition-all duration-500 rounded-t-xl ${tourActive && currentStep === 2 && activeTab === 'rafiki' ? 'bg-primary/10 ring-4 ring-primary ring-opacity-50 animate-pulse pb-24' : ''}`}>
             <input
               type="text"
               value={chatInput}
+              disabled={isAiThinking}
+              onFocus={() => {
+                if (tourActive && currentStep === 2) nextStep();
+              }}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Describe your symptoms..."
-              className="flex-1 bg-muted rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+              placeholder={isAiThinking ? "Rafiki is thinking..." : "Describe your symptoms..."}
+              className="flex-1 bg-muted rounded-xl px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-50"
             />
             <button
               onClick={handleSendMessage}
-              className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center"
+              disabled={isAiThinking}
+              className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center disabled:opacity-50"
             >
               <Send className="w-4 h-4 text-primary-foreground" />
             </button>
