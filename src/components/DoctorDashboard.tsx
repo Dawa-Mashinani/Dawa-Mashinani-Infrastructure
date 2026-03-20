@@ -68,7 +68,7 @@ const DoctorDashboard = ({ user, onLogout }: DoctorDashboardProps) => {
     const t1 = setTimeout(() => {
       setTotalSteps(5);
       startTour();
-    }, 1500);
+    }, 3500);
     return () => clearTimeout(t1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -83,37 +83,37 @@ const DoctorDashboard = ({ user, onLogout }: DoctorDashboardProps) => {
       speak(
         `Jambo Dr. ${user.name.split(' ')[0]}! Welcome to the Doctor Portal. Allow me to guide you through your clinical dashboard.`,
         `Jambo Daktari ${user.name.split(' ')[0]}! Karibu kwenye lango la daktari. Wacha nikuonyeshe ukurasa wako wa kliniki.`,
-        8000
+        11000
       );
-      timeoutId = window.setTimeout(() => nextStep(), 9000);
+      timeoutId = window.setTimeout(() => nextStep(), 12000);
     } else if (currentStep === 2) {
       speak(
         "This is the Patients section. You can search for any patient by name, phone, or UPI number and view their complete shared health records from the field.",
         "Hii ni sehemu ya Wagonjwa. Unaweza kutafuta mgonjwa yeyote kwa jina, simu, au nambari ya UPI na kuona rekodi zao kamili za afya.",
-        12000
+        15000
       );
-      timeoutId = window.setTimeout(() => nextStep(), 13000);
+      timeoutId = window.setTimeout(() => nextStep(), 16000);
     } else if (currentStep === 3) {
       speak(
         "Next is Clinical Alerts — these are critical referrals coming from the USSD system and CHP network that need your urgent attention. Emergency alerts flash red.",
         "Ifuatayo ni Arifa za Kliniki — hizi ni rufaa muhimu zinazotoka kwenye mfumo wa USSD na mtandao wa CHPs zinazohitaji umakini wako. Arifa za dharura zinaangaza nyekundu.",
-        12000
+        15000
       );
-      timeoutId = window.setTimeout(() => nextStep(), 13000);
+      timeoutId = window.setTimeout(() => nextStep(), 16000);
     } else if (currentStep === 4) {
       speak(
         "The More tab gives you access to your doctor profile, account settings, and the option to switch roles or log out of the portal.",
         "Kitufe cha Zaidi kinakupa ufikiaji wa wasifu wako wa daktari, mipangilio ya akaunti, na chaguo la kubadilisha jukumu au kutoka.",
-        12000
+        15000
       );
-      timeoutId = window.setTimeout(() => nextStep(), 13000);
+      timeoutId = window.setTimeout(() => nextStep(), 16000);
     } else if (currentStep === 5) {
       speak(
         "You're all set, Doctor! Explore the tabs below and tap my icon anytime you need help. I'm always here for you! 🎉",
         "Uko tayari, Daktari! Chunguza vitufe hapa chini na ubonyeze ikoni yangu wakati wowote unahitaji msaada! 🎉",
-        8000
+        11000
       );
-      timeoutId = window.setTimeout(() => endTour(), 9000);
+      timeoutId = window.setTimeout(() => endTour(), 13000);
     }
 
     return () => {
@@ -486,7 +486,7 @@ const DoctorDashboard = ({ user, onLogout }: DoctorDashboardProps) => {
                   <p className="text-sm text-muted-foreground">{rec.value as string}</p>
                   <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
                     <CheckCircle2 className="w-3 h-3" />
-                    SHA-256: {(rec.sha256_hash as string).substring(0, 12)}...
+                    Security ID: {(rec.sha256_hash as string).substring(0, 12)}...
                     <span className="ml-1 text-success">✓ Verified</span>
                   </div>
                 </div>

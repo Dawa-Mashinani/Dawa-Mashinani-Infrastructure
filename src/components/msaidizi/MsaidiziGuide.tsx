@@ -15,12 +15,12 @@ const CONTEXT_MAP: Record<string, Record<string, { en: string; sw: string }>> = 
       sw: "Hii ni Rafiki AI Chat — msaidizi wako wa afya. Andika dalili au maswali yako hapa chini na Rafiki atakuongoza."
     },
     jirani: {
-      en: "This is Jirani Health Ledger — your medical history secured with SHA-256. All your visit records from Community Health Promoters appear here.",
-      sw: "Hii ni Jirani Health Ledger — historia yako ya matibabu iliyolindwa na SHA-256. Rekodi zako zote zinaonekana hapa."
+      en: "This is Jirani Health Ledger — your medical history is well secured. All your visit records from Community Health Promoters appear here.",
+      sw: "Hii ni Jirani Health Ledger — historia yako ya matibabu imelindwa vizuri. Rekodi zako zote zinaonekana hapa."
     },
     mlinzi: {
-      en: "This is Mlinzi Health Monitor — your predictive health dashboard. It shows your health score, trends, and personalized recommendations.",
-      sw: "Hii ni Mlinzi Health Monitor — ukurasa wako wa afya. Unaonyesha alama yako ya afya, mienendo, na mapendekezo ya kibinafsi."
+      en: "This is Mlinzi Health Monitor — you can run a camera pulse scan, get a computed health score, view scan history, download a personalized report, and receive Rafiki recommendations from your latest measurements.",
+      sw: "Hii ni Mlinzi Health Monitor — unaweza kufanya kipimo cha mpigo wa moyo kwa kamera, kupata alama ya afya, kuona historia ya vipimo, kupakua ripoti binafsi, na kupata mapendekezo ya Rafiki kulingana na vipimo vya karibuni."
     },
     more: {
       en: "This is your Settings page. View your profile, manage privacy, change language, or switch roles and log out.",

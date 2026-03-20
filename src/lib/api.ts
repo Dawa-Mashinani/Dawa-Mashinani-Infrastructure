@@ -168,30 +168,69 @@ Your response MUST:
 Respond in English. Do NOT include "Rafiki:" prefix. Be genuinely helpful and responsive.`;
 
   try {
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { 
-            maxOutputTokens: 250,
-            temperature: 0.7,  // Increased from 0.4 for more natural responses
-            topP: 0.95,
-            topK: 40,
-          },
-        }),
-      }
-    );
+    // Prefer models that are commonly available on current free-tier projects.
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash'];
+    let data: Record<string, unknown> | null = null;
+    let lastErrorBody = '';
 
-    if (!resp.ok) {
+    for (const model of models) {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 18000);
+
+      let resp: Response;
+      try {
+        resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                maxOutputTokens: 250,
+                temperature: 0.7,
+                topP: 0.95,
+                topK: 40,
+              },
+            }),
+          }
+        );
+      } finally {
+        window.clearTimeout(timeout);
+      }
+
+      if (resp.ok) {
+        data = await resp.json();
+        console.log(`[RAFIKI] Gemini response success on ${model}`);
+        break;
+      }
+
       const errData = await resp.text();
-      console.error('[RAFIKI] Gemini API error:', resp.status, errData);
+      lastErrorBody = errData;
+      console.error(`[RAFIKI] Gemini API error on ${model}:`, resp.status, errData);
+
+      if (resp.status === 429) {
+        return {
+          reply: 'Rafiki AI is temporarily unavailable because the current Gemini API quota for this key is exhausted. Please add billing or generate a new API key from a project with active Gemini quota, then restart the app.',
+          severity: 'low',
+        };
+      }
+
+      // If model is unavailable/not found, try next model.
+      if (resp.status === 404 || resp.status === 400) {
+        continue;
+      }
+
+      // Other HTTP errors: stop trying and fallback.
+      break;
+    }
+
+    if (!data) {
+      console.warn('[RAFIKI] No successful model response; using fallback. Last error:', lastErrorBody);
       return { reply: getFallbackResponse(userMessage), severity: 'low' };
     }
 
-    const data = await resp.json();
     const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     console.log('[RAFIKI] Gemini response:', raw);
 

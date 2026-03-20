@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MockUser } from '@/lib/store';
 import { fetchAlerts, respondToAlert, fetchAlertNotifications, fetchStats, subscribeToAlerts } from '@/lib/api';
 import BottomNav from './BottomNav';
-import SettingsPanel from './SettingsPanel';
 import { useMsaidizi } from '@/components/msaidizi/MsaidiziProvider';
+import SettingsPanel from './SettingsPanel';
 
 interface AlertRow {
   id: string;
@@ -63,7 +63,7 @@ const CHPDashboard = ({ user, onLogout }: CHPDashboardProps) => {
     const t1 = setTimeout(() => {
       setTotalSteps(5);
       startTour();
-    }, 1500);
+    }, 3500);
     return () => clearTimeout(t1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -78,37 +78,37 @@ const CHPDashboard = ({ user, onLogout }: CHPDashboardProps) => {
       speak(
         `Jambo ${user.name.split(' ')[0]}! Welcome to your CHP Console. Allow me to guide you through your field dashboard.`,
         `Jambo ${user.name.split(' ')[0]}! Karibu kwenye dashibodi yako ya CHP. Wacha nikuonyeshe jinsi inavyofanya kazi.`,
-        8000
+        11000
       );
-      timeoutId = window.setTimeout(() => nextStep(), 9000);
+      timeoutId = window.setTimeout(() => nextStep(), 12000);
     } else if (currentStep === 2) {
       speak(
         "This is your Alerts section. Here you see incoming reports from patients via USSD and the app. Emergency alerts flash red and include details of who was notified — neighbors and CHPs.",
         "Hii ni sehemu yako ya Arifa. Hapa unaona ripoti zinazoingia kutoka kwa wagonjwa kupitia USSD na programu. Arifa za dharura zinaangaza na kuonyesha nani aliyearifiwa.",
-        12000
+        15000
       );
-      timeoutId = window.setTimeout(() => nextStep(), 13000);
+      timeoutId = window.setTimeout(() => nextStep(), 16000);
     } else if (currentStep === 3) {
       speak(
         "Next is the Referral Tracker — here you can track household follow-up visits synced with eCHIS and ensure patients are receiving the care they were referred for.",
         "Ifuatayo ni Kifuatiliaji cha Rufaa — hapa unaweza kufuatilia ziara za ufuatiliaji wa kaya zilizosawazishwa na eCHIS na kuhakikisha wagonjwa wanapata huduma.",
-        12000
+        15000
       );
-      timeoutId = window.setTimeout(() => nextStep(), 13000);
+      timeoutId = window.setTimeout(() => nextStep(), 16000);
     } else if (currentStep === 4) {
       speak(
         "The More tab gives you access to your CHP profile, account settings, and the option to switch roles or log out of the system.",
         "Kitufe cha Zaidi kinakupa ufikiaji wa wasifu wako wa CHP, mipangilio ya akaunti, na chaguo la kubadilisha jukumu au kutoka.",
-        12000
+        15000
       );
-      timeoutId = window.setTimeout(() => nextStep(), 13000);
+      timeoutId = window.setTimeout(() => nextStep(), 16000);
     } else if (currentStep === 5) {
       speak(
         "You're all set! Explore the tabs below and tap my icon anytime you need help. Together we keep the community healthy! 🎉",
         "Uko tayari! Chunguza vitufe hapa chini na ubonyeze ikoni yangu wakati wowote. Pamoja tunalinda afya ya jamii! 🎉",
-        8000
+        11000
       );
-      timeoutId = window.setTimeout(() => endTour(), 9000);
+      timeoutId = window.setTimeout(() => endTour(), 13000);
     }
 
     return () => {

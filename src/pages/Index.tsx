@@ -217,7 +217,7 @@ const Index = () => {
         <div className="text-center">
           <div className="w-64 max-h-48 mx-auto -mb-4 flex items-center justify-center">
             <img 
-              src="/Dawa-Mashinani-black.svg" 
+              src="/Dawa-Mashinani-favicon.svg" 
               alt="Dawa Mashinani Startup Logo" 
               className="w-full h-auto object-contain"
             />
@@ -225,7 +225,7 @@ const Index = () => {
           <div className="space-y-1 relative z-10">
             <h1 className="text-2xl font-bold text-foreground font-[Inter]">Dawa Mashinani</h1>
             <p className="text-sm text-muted-foreground">
-              Digital Health Superhighway — Proof of Concept
+              Digital Health Superhighway
             </p>
           </div>
         </div>

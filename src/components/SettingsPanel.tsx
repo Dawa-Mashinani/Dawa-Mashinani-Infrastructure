@@ -35,7 +35,7 @@ const TRANSLATIONS: Record<string, Record<Language, string>> = {
   'Switch Role / Logout': { en: 'Switch Role / Logout', sw: 'Badilisha Jukumu / Ondoka' },
   'Privacy Policy': { en: 'Privacy Policy', sw: 'Sera ya Faragha' },
   'Data Security': { en: 'Data Security', sw: 'Usalama wa Data' },
-  'Your data is encrypted': { en: 'Your data is encrypted with SHA-256. We never sell or share your health information without explicit consent.', sw: 'Data yako imesimbwa na SHA-256. Hatuwezi kuuza au kushiriki taarifa yako ya afya bila idhini wazi.' },
+  'Your data is encrypted': { en: 'Your data is well secured. We never sell or share your health information without explicit consent.', sw: 'Data yako imelindwa vizuri. Hatuuzi wala kushiriki taarifa yako ya afya bila idhini wazi.' },
   'We collect only': { en: 'We collect only essential health data to improve your care. You can delete your account anytime.', sw: 'Tunakusanya data ya afya tu inayohitajika kuboresha huduma yako. Unaweza kufuta akaunti yako wakati wowote.' },
   'Close': { en: 'Close', sw: 'Funga' },
   'Dawa Mashinani': { en: 'Dawa Mashinani', sw: 'Dawa Mashinani' },
@@ -260,7 +260,7 @@ const SettingsPanel = ({ user, onLogout }: SettingsPanelProps) => {
                     <p className="font-semibold text-foreground text-sm">{t('Dawa Mashinani', language)}</p>
                     <p>{t('Description', language)}</p>
                     <div className="flex items-center gap-3 pt-1 text-[10px] flex-wrap">
-                      <span className="text-primary font-medium">SHA-256 Secured</span>
+                      <span className="text-primary font-medium">Well Secured Data</span>
                       <span className="text-primary font-medium">FHIR-Ready</span>
                     </div>
                     <p className="text-[10px] pt-1">© 2026 Dawa Mashinani</p>

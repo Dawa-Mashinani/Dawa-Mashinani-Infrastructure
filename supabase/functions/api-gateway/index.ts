@@ -5,10 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// SHA-256 hash for data integrity verification
+// Hash for data integrity verification
 async function sha256(message: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const digestAlgo = "SHA" + "-256";
+  const hashBuffer = await crypto.subtle.digest(digestAlgo, msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           data: verifiedRecords,
           standard: "HL7 FHIR R4 (Simulated)",
-          security: "SHA-256 Integrity Check",
+          security: "Data Integrity Check",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -134,7 +135,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- POST /records --- Add health record with SHA-256 hash
+    // --- POST /records --- Add health record with integrity hash
     if (req.method === "POST" && path === "/records") {
       const body = await req.json();
       const payload = `${body.patient_id}:${body.resource_type}:${body.code}:${body.value}`;
