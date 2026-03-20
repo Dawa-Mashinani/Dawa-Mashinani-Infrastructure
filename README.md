@@ -1,6 +1,6 @@
-site is live in my server, access it via: https://unabated-shayne-mixible.ngrok-free.dev
+Site is live in my server, access it via: https://unabated-shayne-mixible.ngrok-free.dev
 
-below you get the instructions to set up and run it in your own server 
+Below you get the instructions to set up and run it in your own server 
 # Dawa-Mashinani-Infrastructure
 
 A frontend/infrastructure repo bootstrapped with Vite + React + TypeScript and Tailwind. This README explains how to clone the repository from your GitHub organization, install dependencies, run the dev server, expose it with ngrok, and push the code to GitHub.
