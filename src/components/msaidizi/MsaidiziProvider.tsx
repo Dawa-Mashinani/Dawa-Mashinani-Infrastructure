@@ -49,7 +49,7 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
     (localStorage.getItem('ms_voicetype') as VoiceType) || 'lady'
   );
   const [theme, setThemeState] = useState<Theme>(
-    (localStorage.getItem('ms_theme') as Theme) || 'system'
+    (localStorage.getItem('ms_theme') as Theme) || 'light'
   );
   const [isOpen, setIsOpen] = useState(false);
   
@@ -126,22 +126,46 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
     const utterance = new SpeechSynthesisUtterance(text);
     
     const voices = window.speechSynthesis.getVoices();
-    let selectedVoice = voices.find(v => v.lang.includes(language === 'sw' ? 'sw' : 'en'));
+    const langMatch = language === 'sw' ? 'sw' : 'en';
     
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.lang.includes('en'));
-    }
-    
+    // Filter voices by language
+    const availableVoices = voices.filter(v => v.lang.startsWith(langMatch));
+    let selectedVoice = availableVoices[0] || voices.find(v => v.lang.includes('en'));
+
+    // Voice personality selection with distinct characteristics
     if (voiceType === 'boy') {
-      utterance.pitch = 1.3;
-      utterance.rate = 1.1;
+      utterance.pitch = 1.4;  // Higher pitch for boy
+      utterance.rate = 1.15;  // Slightly faster for energetic boy voice
+      // Try to find a boy/child voice if available
+      const boyVoice = availableVoices.find(v => 
+        v.name.toLowerCase().includes('junior') || 
+        v.name.toLowerCase().includes('child') ||
+        v.name.toLowerCase().includes('boy')
+      );
+      if (boyVoice) selectedVoice = boyVoice;
     } else if (voiceType === 'man') {
-      utterance.pitch = 0.8;
-      utterance.rate = 0.9;
-    } else {
-      utterance.pitch = 1.1;
-      utterance.rate = 1.0;
-      const femaleVoice = voices.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('samantha'));
+      utterance.pitch = 0.75;  // Lower pitch for man
+      utterance.rate = 0.85;   // Slower for deeper man voice
+      // Try to find a male voice
+      const maleVoice = availableVoices.find(v => 
+        v.name.toLowerCase().includes('male') || 
+        v.name.toLowerCase().includes('david') ||
+        v.name.toLowerCase().includes('alex') ||
+        v.name.toLowerCase().includes('man')
+      );
+      if (maleVoice) selectedVoice = maleVoice;
+    } else { // lady
+      utterance.pitch = 1.15;  // Slightly elevated pitch for lady
+      utterance.rate = 1.0;    // Normal rate for lady voice
+      // Try to find a female voice
+      const femaleVoice = availableVoices.find(v => 
+        v.name.toLowerCase().includes('female') || 
+        v.name.toLowerCase().includes('zira') || 
+        v.name.toLowerCase().includes('samantha') ||
+        v.name.toLowerCase().includes('victoria') ||
+        v.name.toLowerCase().includes('woman') ||
+        v.name.toLowerCase().includes('lady')
+      );
       if (femaleVoice) selectedVoice = femaleVoice;
     }
 
