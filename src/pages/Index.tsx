@@ -15,6 +15,7 @@ const ROLES: { id: UserRole; label: string; desc: string; icon: React.ElementTyp
 
 const Index = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const { user, setUser, speak, language, setActiveView, setActiveRole } = useMsaidizi();
 
   // Sync active view for context-aware MsaidiziGuide
@@ -58,8 +59,6 @@ const Index = () => {
     );
   };
 
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -72,7 +71,7 @@ const Index = () => {
     // Full Name: required, text only (letters, spaces, hyphens, apostrophes)
     if (!name) {
       errors.fullName = 'Full name is required';
-    } else if (!/^[A-Za-z\s'\-]+$/.test(name)) {
+    } else if (!/^[A-Za-z\s'-]+$/.test(name)) {
       errors.fullName = 'Name must contain only letters';
     } else if (name.length < 2) {
       errors.fullName = 'Name must be at least 2 characters';
@@ -81,7 +80,7 @@ const Index = () => {
     // ID / License: required, alphanumeric
     if (!idNum) {
       errors.idNum = 'ID / License number is required';
-    } else if (!/^[A-Za-z0-9\-\/]+$/.test(idNum)) {
+    } else if (!/^[A-Za-z0-9/'-]+$/.test(idNum)) {
       errors.idNum = 'Must be alphanumeric (letters and numbers only)';
     }
 
