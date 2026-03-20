@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MockUser } from '@/lib/store';
 import { fetchPatients, fetchPatientRecords, fetchStats, fetchAlerts, respondToAlert, fetchAlertNotifications, subscribeToAlerts } from '@/lib/api';
 import BottomNav from './BottomNav';
+import SettingsPanel from './SettingsPanel';
 import { useMsaidizi } from '@/components/msaidizi/MsaidiziProvider';
 
 interface AlertRow {
@@ -521,23 +522,7 @@ const DoctorDashboard = ({ user, onLogout }: DoctorDashboardProps) => {
       )}
 
       {activeTab === 'more' && (
-        <div className="px-4 pt-4 space-y-3">
-          <h2 className="font-bold text-foreground font-[Inter] text-lg">Settings</h2>
-          <div className="bg-card rounded-xl border border-border divide-y divide-border">
-            <div className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center">
-                <User className="w-5 h-5 text-accent-foreground" />
-              </div>
-              <div>
-                <p className="font-medium text-foreground">{user.name}</p>
-                <p className="text-sm text-muted-foreground">{user.afyaId}</p>
-              </div>
-            </div>
-            <button onClick={onLogout} className="w-full p-4 text-left text-sm text-destructive">
-              Switch Role / Logout
-            </button>
-          </div>
-        </div>
+        <SettingsPanel user={user} onLogout={onLogout} />
       )}
 
       <BottomNav role="doctor" activeTab={activeTab} onTabChange={setActiveTab} />

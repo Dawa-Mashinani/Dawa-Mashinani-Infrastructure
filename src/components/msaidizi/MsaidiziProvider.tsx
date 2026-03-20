@@ -3,12 +3,14 @@ import type { MockUser } from '@/lib/store';
 
 export type Language = 'en' | 'sw';
 export type VoiceType = 'boy' | 'man' | 'lady';
+export type Theme = 'light' | 'dark' | 'system';
 
 interface MsaidiziState {
   enabled: boolean;
   language: Language;
   voiceEnabled: boolean;
   voiceType: VoiceType;
+  theme: Theme;
   currentStep: number;
   totalSteps: number;
   isOpen: boolean;
@@ -19,6 +21,7 @@ interface MsaidiziState {
   setLanguage: (lang: Language) => void;
   setVoiceEnabled: (enabled: boolean) => void;
   setVoiceType: (type: VoiceType) => void;
+  setTheme: (theme: Theme) => void;
   setIsOpen: (isOpen: boolean) => void;
   setUser: (user: MockUser | null) => void;
   setTotalSteps: (steps: number) => void;
@@ -45,6 +48,9 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
   const [voiceType, setVoiceType] = useState<VoiceType>(
     (localStorage.getItem('ms_voicetype') as VoiceType) || 'lady'
   );
+  const [theme, setThemeState] = useState<Theme>(
+    (localStorage.getItem('ms_theme') as Theme) || 'system'
+  );
   const [isOpen, setIsOpen] = useState(false);
   
   const [user, setUser] = useState<MockUser | null>(() => {
@@ -60,6 +66,29 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
   const autoCloseTimeoutRef = useRef<number | null>(null);
   const [activeView, setActiveView] = useState('landing');
   const [activeRole, setActiveRole] = useState('');
+
+  // Apply theme to <html> element
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else if (theme === 'light') {
+      root.classList.remove('dark');
+    } else {
+      // system
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.classList.toggle('dark', prefersDark);
+      const handler = (e: MediaQueryListEvent) => root.classList.toggle('dark', e.matches);
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    }
+  }, [theme]);
+
+  const setTheme = (t: Theme) => {
+    setThemeState(t);
+    localStorage.setItem('ms_theme', t);
+  };
 
   useEffect(() => {
     localStorage.setItem('ms_lang', language);
@@ -140,8 +169,8 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <MsaidiziContext.Provider value={{
-      enabled, language, voiceEnabled, voiceType, currentStep, totalSteps, isOpen, user, currentMessage, tourActive, activeView, activeRole,
-      setLanguage, setVoiceEnabled, setVoiceType, setIsOpen, setUser, setTotalSteps, speak, nextStep, startTour, endTour, setActiveView, setActiveRole
+      enabled, language, voiceEnabled, voiceType, theme, currentStep, totalSteps, isOpen, user, currentMessage, tourActive, activeView, activeRole,
+      setLanguage, setVoiceEnabled, setVoiceType, setTheme, setIsOpen, setUser, setTotalSteps, speak, nextStep, startTour, endTour, setActiveView, setActiveRole
     }}>
       {children}
     </MsaidiziContext.Provider>

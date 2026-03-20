@@ -254,7 +254,7 @@ const Index = () => {
         </div>
 
         <p className="text-[10px] text-muted-foreground text-center">
-          PoC Demo · SHA-256 Secured · FHIR-Ready · Zero-Trust Architecture
+          Empowering Rural Healthcare · One Village at a Time 🌍
         </p>
       </motion.div>
     </div>

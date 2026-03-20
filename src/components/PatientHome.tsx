@@ -5,6 +5,7 @@ import { MockUser } from '@/lib/store';
 import { supabase } from '@/integrations/supabase/client';
 import { askRafikiAI } from '@/lib/api';
 import BottomNav from './BottomNav';
+import SettingsPanel from './SettingsPanel';
 import { useMsaidizi } from '@/components/msaidizi/MsaidiziProvider';
 
 interface PatientHomeProps {
@@ -347,20 +348,7 @@ const PatientHome = ({ user, onLogout }: PatientHomeProps) => {
       )}
 
       {activeTab === 'more' && (
-        <div className="px-4 pt-4 space-y-3">
-          <h2 className="font-bold text-foreground font-[Inter] text-lg">Settings</h2>
-          <div className="bg-card rounded-xl border border-border divide-y divide-border">
-            <div className="p-4">
-              <p className="font-medium text-foreground">{user.name}</p>
-              <p className="text-sm text-muted-foreground">{user.phone}</p>
-            </div>
-            <button className="w-full p-4 text-left text-sm text-foreground">Privacy & Security</button>
-            <button className="w-full p-4 text-left text-sm text-foreground">Language</button>
-            <button onClick={onLogout} className="w-full p-4 text-left text-sm text-destructive">
-              Switch Role / Logout
-            </button>
-          </div>
-        </div>
+        <SettingsPanel user={user} onLogout={onLogout} />
       )}
 
       <BottomNav role="patient" activeTab={activeTab} onTabChange={setActiveTab} />
