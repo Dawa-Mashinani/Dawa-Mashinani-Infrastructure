@@ -145,26 +145,27 @@ export async function askRafikiAI(
     return { reply: getFallbackResponse(userMessage), severity: 'low' };
   }
 
-  // Build conversation context (last 6 messages max)
-  const recent = conversationHistory.slice(-6).map(m =>
+  // Build conversation context (last 10 messages max for better context)
+  const recent = conversationHistory.slice(-10).map(m =>
     m.from === 'user' ? `Patient: ${m.text}` : `Rafiki: ${m.text}`
   ).join('\n');
 
   const prompt = `You are Rafiki, a warm and knowledgeable AI health assistant for Dawa Mashinani, a rural Kenya health platform.
 
-Conversation so far:
-${recent}
-Patient: ${userMessage}
+${recent ? `Conversation context:\n${recent}\n` : ''}Patient: ${userMessage}
 
-Respond as Rafiki. Your response MUST:
-1. Be empathetic, clear, and actionable
-2. Be 1-3 sentences max (keep it concise for mobile)
-3. If symptoms sound serious, recommend visiting a clinic or CHP
-4. Never diagnose — only advise and triage
-5. End with SEVERITY tag on new line: SEVERITY:critical OR SEVERITY:high OR SEVERITY:medium OR SEVERITY:low
-6. For greetings/general questions, be friendly and helpful
+IMPORTANT: Respond naturally to what the patient said. If they're not describing health symptoms, acknowledge their concern and gently guide them back to health topics.
 
-Respond in English. Do NOT include "Rafiki:" prefix.`;
+Your response MUST:
+1. Be empathetic, warm, and conversational
+2. Address EXACTLY what the patient said (don't repeat generic text)
+3. Be 2-4 sentences max (keep it natural for mobile chat)
+4. If health symptoms are mentioned, assess severity and recommend next steps
+5. Never diagnose — only advise, assess, and triage
+6. Always be helpful even for non-health topics
+7. End with SEVERITY tag on new line: SEVERITY:critical OR SEVERITY:high OR SEVERITY:medium OR SEVERITY:low
+
+Respond in English. Do NOT include "Rafiki:" prefix. Be genuinely helpful and responsive.`;
 
   try {
     const resp = await fetch(
@@ -174,19 +175,30 @@ Respond in English. Do NOT include "Rafiki:" prefix.`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 200, temperature: 0.4 },
+          generationConfig: { 
+            maxOutputTokens: 250,
+            temperature: 0.7,  // Increased from 0.4 for more natural responses
+            topP: 0.95,
+            topK: 40,
+          },
         }),
       }
     );
 
     if (!resp.ok) {
-      console.error('[RAFIKI] Gemini API error:', resp.status);
+      const errData = await resp.text();
+      console.error('[RAFIKI] Gemini API error:', resp.status, errData);
       return { reply: getFallbackResponse(userMessage), severity: 'low' };
     }
 
     const data = await resp.json();
     const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('[RAFIKI] Gemini raw:', raw);
+    console.log('[RAFIKI] Gemini response:', raw);
+
+    if (!raw) {
+      console.warn('[RAFIKI] Empty Gemini response, using fallback');
+      return { reply: getFallbackResponse(userMessage), severity: 'low' };
+    }
 
     // Extract severity
     let severity: RafikiAIResponse['severity'] = 'low';
@@ -195,8 +207,12 @@ Respond in English. Do NOT include "Rafiki:" prefix.`;
 
     // Clean the reply
     let reply = raw.replace(/\n?SEVERITY:\w+/gi, '').trim();
-    if (!reply) reply = getFallbackResponse(userMessage);
+    if (!reply) {
+      console.warn('[RAFIKI] Reply empty after cleaning, using fallback');
+      reply = getFallbackResponse(userMessage);
+    }
 
+    console.log(`[RAFIKI] Replying with severity: ${severity}`);
     return { reply, severity };
   } catch (err) {
     console.error('[RAFIKI] Gemini fetch error:', err);
@@ -206,13 +222,29 @@ Respond in English. Do NOT include "Rafiki:" prefix.`;
 
 function getFallbackResponse(input: string): string {
   const lower = input.toLowerCase();
+  
+  // Emotional/personal concerns
+  if (lower.includes('sad') || lower.includes('upset') || lower.includes('dad') || lower.includes('mom') || lower.includes('family')) {
+    return 'I\'m sorry to hear that. It\'s important to take care of your emotional health too. If your family member needs medical help, I can assist with health advice or connecting you to a healthcare provider. What specific health concerns do you have?';
+  }
+  
+  // Specific symptom responses
   if (lower.includes('fever')) return 'Stay hydrated and monitor your temperature. If it exceeds 38.5°C or persists over 2 days, please visit your nearest health facility. Would you like me to alert your CHP?';
   if (lower.includes('headache')) return 'For persistent headaches, rest in a quiet dark room and stay hydrated. If headaches last more than 48 hours or come with vision changes, please visit a clinic.';
   if (lower.includes('cough')) return 'A persistent cough may indicate a respiratory infection. Monitor for difficulty breathing or chest pain. If symptoms worsen, I can help connect you to a Community Health Promoter.';
   if (lower.includes('malaria')) return 'Malaria symptoms include fever, chills, and sweating. Please get tested at a clinic as soon as possible. Take paracetamol for fever and stay hydrated.';
   if (lower.includes('pregnan')) return 'Prenatal care is important! Please ensure regular check-ups with your healthcare provider. If you experience any unusual symptoms, visit a facility immediately.';
   if (lower.includes('stomach') || lower.includes('diarr')) return 'Stay hydrated with clean water and ORS if available. Avoid heavy foods. If symptoms persist beyond 24 hours or you see blood, seek medical help immediately.';
-  return 'I understand your concern. Could you describe your symptoms in more detail? I can help assess the situation and recommend next steps. Remember, for emergencies dial 112 or visit your nearest health facility.';
+  if (lower.includes('pain')) return 'Pain can be caused by many things. Can you tell me more about where the pain is, when it started, and how severe it is? This will help me better assist you.';
+  if (lower.includes('covid') || lower.includes('corona')) return 'If you have respiratory symptoms or fever, please get tested at a clinic. Stay isolated if you suspect COVID-19. Practice hand hygiene and wear a mask around others.';
+  
+  // Greetings
+  if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey')) {
+    return 'Hello! I\'m Rafiki, your health assistant. I\'m here to help with any health concerns or questions. What can I assist you with today?';
+  }
+  
+  // Default - be empathetic but ask for clarity
+  return 'I hear you. While I want to help, I\'m here specifically for health advice and symptom assessment. Could you tell me more about any health concerns or symptoms you or your family member are experiencing? I\'m here to help.';
 }
 
 // ============================================
