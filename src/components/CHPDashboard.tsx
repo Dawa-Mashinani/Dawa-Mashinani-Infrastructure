@@ -55,15 +55,17 @@ const CHPDashboard = ({ user, onLogout }: CHPDashboardProps) => {
   useEffect(() => {
     setActiveRole('chp');
     setActiveView(activeTab);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   useEffect(() => {
-    // Start CHP Tour
+    // Start CHP Tour (runs once on mount)
     const t1 = setTimeout(() => {
       setTotalSteps(5);
       startTour();
     }, 1500);
     return () => clearTimeout(t1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Tour Controller
@@ -112,6 +114,7 @@ const CHPDashboard = ({ user, onLogout }: CHPDashboardProps) => {
     return () => {
       if (timeoutId) window.clearTimeout(timeoutId);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, tourActive]);
 
   // Initial data load

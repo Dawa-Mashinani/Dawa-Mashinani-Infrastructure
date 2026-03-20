@@ -29,16 +29,18 @@ const PatientHome = ({ user, onLogout }: PatientHomeProps) => {
   useEffect(() => {
     setActiveRole('patient');
     setActiveView(activeTab);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   useEffect(() => {
-    // Start Patient Tour
+    // Start Patient Tour (runs once on mount)
     const t1 = setTimeout(() => {
       setTotalSteps(6);
       startTour();
     }, 1500);
 
     return () => clearTimeout(t1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -93,6 +95,7 @@ const PatientHome = ({ user, onLogout }: PatientHomeProps) => {
     return () => {
       if (timeoutId) window.clearTimeout(timeoutId);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, tourActive]);
 
   // Load health records from DB

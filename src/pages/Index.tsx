@@ -24,6 +24,7 @@ const Index = () => {
       setActiveRole('');
       setActiveView(selectedRole ? 'login' : 'landing');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRole, user]);
 
   // Landing page welcome message
@@ -37,6 +38,7 @@ const Index = () => {
         );
       }, 1000);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (user) {

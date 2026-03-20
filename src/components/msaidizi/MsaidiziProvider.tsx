@@ -201,6 +201,7 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useMsaidizi = () => {
   const context = useContext(MsaidiziContext);
   if (!context) throw new Error('useMsaidizi must be used within MsaidiziProvider');

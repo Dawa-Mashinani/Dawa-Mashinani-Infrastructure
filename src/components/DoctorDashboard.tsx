@@ -60,15 +60,17 @@ const DoctorDashboard = ({ user, onLogout }: DoctorDashboardProps) => {
   useEffect(() => {
     setActiveRole('doctor');
     setActiveView(activeTab);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   useEffect(() => {
-    // Start Doctor Tour
+    // Start Doctor Tour (runs once on mount)
     const t1 = setTimeout(() => {
       setTotalSteps(5);
       startTour();
     }, 1500);
     return () => clearTimeout(t1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Tour Controller
@@ -117,6 +119,7 @@ const DoctorDashboard = ({ user, onLogout }: DoctorDashboardProps) => {
     return () => {
       if (timeoutId) window.clearTimeout(timeoutId);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, tourActive]);
 
   // Load initial data
