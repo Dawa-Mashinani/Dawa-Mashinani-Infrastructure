@@ -136,6 +136,29 @@ interface RafikiAIResponse {
   severity: 'critical' | 'high' | 'medium' | 'low';
 }
 
+interface MlinziVisionResponse {
+  insights: string;
+}
+
+interface GeminiPart {
+  text?: string;
+  inlineData?: {
+    mimeType: string;
+    data: string;
+  };
+}
+
+interface GeminiCandidate {
+  content?: {
+    parts?: GeminiPart[];
+  };
+  finishReason?: string;
+}
+
+interface GeminiGenerateResponse {
+  candidates?: GeminiCandidate[];
+}
+
 export async function askRafikiAI(
   userMessage: string,
   conversationHistory: { from: string; text: string }[]
@@ -188,7 +211,7 @@ Respond in English. Do NOT include "Rafiki:" prefix. Be genuinely helpful and re
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
               generationConfig: {
-                maxOutputTokens: 250,
+                maxOutputTokens: 420,
                 temperature: 0.7,
                 topP: 0.95,
                 topK: 40,
@@ -231,8 +254,15 @@ Respond in English. Do NOT include "Rafiki:" prefix. Be genuinely helpful and re
       return { reply: getFallbackResponse(userMessage), severity: 'low' };
     }
 
-    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const candidate = data?.candidates?.[0];
+    const raw = (candidate?.content?.parts || [])
+      .map((p) => p.text || '')
+      .join('')
+      .trim();
     console.log('[RAFIKI] Gemini response:', raw);
+    if (candidate?.finishReason) {
+      console.log('[RAFIKI] Finish reason:', candidate.finishReason);
+    }
 
     if (!raw) {
       console.warn('[RAFIKI] Empty Gemini response, using fallback');
@@ -284,6 +314,92 @@ function getFallbackResponse(input: string): string {
   
   // Default - be empathetic but ask for clarity
   return 'I hear you. While I want to help, I\'m here specifically for health advice and symptom assessment. Could you tell me more about any health concerns or symptoms you or your family member are experiencing? I\'m here to help.';
+}
+
+export async function analyzeMlinziImage(
+  imageBase64: string,
+  mimeType: string,
+  userPrompt: string
+): Promise<MlinziVisionResponse> {
+  if (!GEMINI_API_KEY) {
+    return {
+      insights: 'Vision analysis is unavailable because Gemini API key is missing.',
+    };
+  }
+
+  const prompt = `You are Rafiki Vision in Dawa Mashinani. Analyze this uploaded health-related image deeply and provide practical insights.
+
+User context/request: ${userPrompt}
+
+Rules:
+1. Give a clear visual summary first.
+2. List possible interpretations with confidence labels (high/medium/low).
+3. Mention warning signs that require urgent clinical care.
+4. Give safe next actions for home and clinic follow-up.
+5. Keep response concise but detailed enough for field decision support.
+6. Never claim a final diagnosis.
+7. If image quality is poor, say what to improve and request a clearer image.
+`;
+
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-2.0-flash'];
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 22000);
+
+    try {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  {
+                    inlineData: {
+                      mimeType,
+                      data: imageBase64,
+                    },
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.35,
+              maxOutputTokens: 700,
+            },
+          }),
+        }
+      );
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error(`[MLINZI VISION] Gemini error on ${model}:`, resp.status, errText);
+        if (resp.status === 404 || resp.status === 400) continue;
+        if (resp.status === 429) {
+          return {
+            insights: 'Vision analysis is temporarily unavailable because current Gemini API quota is exhausted. Please try again later with active quota.',
+          };
+        }
+        continue;
+      }
+
+      const data = (await resp.json()) as GeminiGenerateResponse;
+      const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('\n').trim();
+      if (text) return { insights: text };
+    } catch (e) {
+      console.error(`[MLINZI VISION] Fetch failed on ${model}:`, e);
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  return {
+    insights: 'I could not analyze this image right now. Please retry with a clearer photo and good lighting.',
+  };
 }
 
 // ============================================

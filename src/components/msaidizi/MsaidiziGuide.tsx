@@ -3,66 +3,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Volume2, VolumeX, X, Languages, ChevronRight } from 'lucide-react';
 import { useMsaidizi, type VoiceType } from './MsaidiziProvider';
 
-/* Contextual explanations keyed by role → tab */
-const CONTEXT_MAP: Record<string, Record<string, { en: string; sw: string }>> = {
-  patient: {
-    home: {
-      en: "You're on your Home screen. From here you can start a Rafiki AI consultation, view your Digital Afya ID, or use the tabs below to explore.",
-      sw: "Uko kwenye ukurasa wa Nyumbani. Kutoka hapa unaweza kuanza mazungumzo na Rafiki AI, kuona Kitambulisho chako cha Afya, au kutumia vitufe hapa chini."
-    },
-    rafiki: {
-      en: "This is Rafiki AI Chat — your personal health assistant. Type your symptoms or health questions below and Rafiki will guide you with advice.",
-      sw: "Hii ni Rafiki AI Chat — msaidizi wako wa afya. Andika dalili au maswali yako hapa chini na Rafiki atakuongoza."
-    },
-    jirani: {
-      en: "This is Jirani Health Ledger — your medical history is well secured. All your visit records from Community Health Promoters appear here.",
-      sw: "Hii ni Jirani Health Ledger — historia yako ya matibabu imelindwa vizuri. Rekodi zako zote zinaonekana hapa."
-    },
-    mlinzi: {
-      en: "This is Mlinzi Health Monitor — you can run a camera pulse scan, get a computed health score, view scan history, download a personalized report, and receive Rafiki recommendations from your latest measurements.",
-      sw: "Hii ni Mlinzi Health Monitor — unaweza kufanya kipimo cha mpigo wa moyo kwa kamera, kupata alama ya afya, kuona historia ya vipimo, kupakua ripoti binafsi, na kupata mapendekezo ya Rafiki kulingana na vipimo vya karibuni."
-    },
-    more: {
-      en: "This is your Settings page. View your profile, manage privacy, change language, or switch roles and log out.",
-      sw: "Hii ni ukurasa wa Mipangilio. Angalia wasifu, kudhibiti faragha, kubadilisha lugha, au kutoka."
-    },
+/* Contextual explanations keyed by active view in the no-login app */
+const CONTEXT_MAP: Record<string, { en: string; sw: string }> = {
+  home: {
+    en: 'You are on Home. Tap a pillar card to open Rafiki AI, Jirani Ledger, or Mlinzi Vitals.',
+    sw: 'Uko kwenye Nyumbani. Gusa kadi ya nguzo kufungua Rafiki AI, Jirani Ledger, au Mlinzi Vitals.'
   },
-  doctor: {
-    home: {
-      en: "You're on the Doctor Home. Here you see patient statistics, critical alerts, and a Quick Patient Lookup to search by name, phone, or UPI.",
-      sw: "Uko kwenye ukurasa wa Daktari. Hapa unaona takwimu za wagonjwa, arifa muhimu, na kutafuta wagonjwa haraka."
-    },
-    patients: {
-      en: "This is the Patient Registry — browse and manage all registered patients in your facility from the National Client Registry.",
-      sw: "Hii ni Daftari la Wagonjwa — tafuta na usimamie wagonjwa wote waliosajiliwa katika kituo chako."
-    },
-    alerts: {
-      en: "These are your Clinical Alerts — critical referrals from the USSD system and CHP network that need your urgent attention.",
-      sw: "Hizi ni Arifa za Kliniki — rufaa muhimu kutoka mfumo wa USSD na mtandao wa CHPs zinazohitaji umakini wako."
-    },
-    more: {
-      en: "This is your Settings page. View your doctor profile, manage your account, or switch roles and log out.",
-      sw: "Hii ni ukurasa wa Mipangilio. Angalia wasifu wako, simamia akaunti, au ubadilishe jukumu na utoke."
-    },
+  rafiki: {
+    en: 'This is Rafiki AI. Ask symptoms, treatment questions, or triage guidance and get a quick response.',
+    sw: 'Hii ni Rafiki AI. Uliza dalili, maswali ya matibabu, au mwongozo wa triage upate jibu la haraka.'
   },
-  chp: {
-    home: {
-      en: "You're on the CHP Home. See pending alerts, acknowledged cases, and daily totals. Click any alert to acknowledge and navigate to the patient.",
-      sw: "Uko kwenye ukurasa wa CHP. Ona arifa zinazosubiri, kesi zilizokubaliwa, na jumla za leo. Bofya arifa kuikubali."
-    },
-    alerts: {
-      en: "This is the full Alerts feed — real-time triage showing all incoming reports from USSD and the app in your coverage area.",
-      sw: "Hii ni mkondo kamili wa Arifa — triage ya wakati halisi inayoonyesha ripoti zote zinazoingia katika eneo lako."
-    },
-    referrals: {
-      en: "This is the Referral Tracker — track household follow-up visits synced with eCHIS and ensure patients receive proper care.",
-      sw: "Hii ni Kifuatiliaji cha Rufaa — fuatilia ziara za ufuatiliaji zilizosawazishwa na eCHIS. Hakikisha wagonjwa wanapata huduma."
-    },
-    more: {
-      en: "This is your Settings page. View your CHP profile, manage your account, or switch roles and log out.",
-      sw: "Hii ni ukurasa wa Mipangilio. Angalia wasifu wako, simamia akaunti, au ubadilishe jukumu na utoke."
-    },
+  jirani: {
+    en: 'This is Jirani Ledger. You can review trusted contacts and recent health records from Supabase.',
+    sw: 'Hii ni Jirani Ledger. Unaweza kuona mawasiliano ya kuaminika na rekodi za afya za hivi karibuni kutoka Supabase.'
   },
+  mlinzi: {
+    en: 'This is Mlinzi Vitals. Save pulse, blood pressure, and temperature, then monitor your latest reading.',
+    sw: 'Hii ni Mlinzi Vitals. Hifadhi mpigo wa moyo, pressure ya damu, na joto, kisha fuatilia kipimo chako cha mwisho.'
+  },
+  messages: {
+    en: 'This is Messages. You can see live notification updates from emergency and response workflows.',
+    sw: 'Hii ni Messages. Unaweza kuona masasisho ya arifa za moja kwa moja kutoka mifumo ya dharura na mwitikio.'
+  },
+  settings: {
+    en: 'This is Settings. You can change language, assistant voice, and app theme quickly.',
+    sw: 'Hii ni Settings. Unaweza kubadilisha lugha, sauti ya msaidizi, na mandhari ya app kwa haraka.'
+  }
 };
 
 export default function MsaidiziGuide() {
@@ -70,12 +36,15 @@ export default function MsaidiziGuide() {
     isOpen, setIsOpen, language, setLanguage, 
     voiceEnabled, setVoiceEnabled, voiceType, setVoiceType,
     currentMessage, tourActive, endTour, currentStep, totalSteps, nextStep,
-    speak, activeView, activeRole
+    speak, activeView
   } = useMsaidizi();
 
   const toggleLang = () => setLanguage(language === 'en' ? 'sw' : 'en');
 
   const handleIconClick = () => {
+    if (!voiceEnabled) setVoiceEnabled(true);
+    window.speechSynthesis.resume();
+
     // During tour: just toggle the panel
     if (tourActive) {
       setIsOpen(!isOpen);
@@ -87,37 +56,25 @@ export default function MsaidiziGuide() {
       window.speechSynthesis.cancel();
       return;
     }
-    // Landing page → re-show welcome
-    if (activeView === 'landing') {
+    if (!activeView) {
       speak(
-        "Welcome! 😊 I'm Msaidizi, your guide. Choose a role below to explore Dawa Mashinani.",
-        "Karibu! 😊 Mimi ni Msaidizi, kiongozi wako. Chagua jukumu hapa chini kuchunguza Dawa Mashinani.",
-        10000
+        'Welcome to Dawa Mashinani. You are already inside the app. Tap any pillar card to begin.',
+        'Karibu Dawa Mashinani. Umeingia moja kwa moja ndani ya app. Gusa kadi yoyote ya nguzo kuanza.',
+        9000
       );
       return;
     }
-    // Login page
-    if (activeView === 'login') {
-      speak(
-        "This is the demo login 😊 Type any name and ID to enter — inputs are not validated.",
-        "Hii ni ukurasa wa kuingia wa demo 😊 Andika jina lolote na nambari kuingia.",
-        10000
-      );
+
+    const explanation = CONTEXT_MAP[activeView];
+    if (explanation) {
+      speak(explanation.en, explanation.sw, 12000);
       return;
     }
-    // Dashboard → contextual explanation
-    const roleMap = CONTEXT_MAP[activeRole];
-    if (roleMap) {
-      const explanation = roleMap[activeView];
-      if (explanation) {
-        speak(explanation.en, explanation.sw, 12000);
-        return;
-      }
-    }
+
     // Fallback
     speak(
-      "Tap any tab below to navigate, and I'll explain what you see!",
-      "Bonyeza kitufe chochote hapa chini na nitakueleza!",
+      "Tap any section and I'll explain what you see.",
+      'Gusa sehemu yoyote nitakueleza unachoona.',
       8000
     );
   };
@@ -148,10 +105,10 @@ export default function MsaidiziGuide() {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bottom-[9rem] right-5 w-[320px] bg-[#FAF7F5] border border-border shadow-2xl rounded-2xl overflow-hidden z-[100] flex flex-col cursor-grab active:cursor-grabbing"
+            className="fixed bottom-[9rem] right-5 w-[320px] bg-[#f1fbf4] border border-border shadow-2xl rounded-2xl overflow-hidden z-[100] flex flex-col cursor-grab active:cursor-grabbing"
           >
             {/* Header */}
-            <div className="bg-[#FAF7F5] px-4 py-3 border-b border-border/60 flex items-center justify-between">
+            <div className="bg-[#f1fbf4] px-4 py-3 border-b border-border/60 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm overflow-hidden border border-border/50">
                   <img src="/Dawa-Mashinani-favicon.svg" alt="Avatar" className="w-6 h-6 object-contain" />
@@ -174,7 +131,7 @@ export default function MsaidiziGuide() {
             </div>
 
             {/* Quick settings row (Optional voice personality tweak) */}
-            <div className="px-4 py-1.5 bg-[#FAF7F5] flex items-center justify-end text-[10px] border-b border-border/40">
+            <div className="px-4 py-1.5 bg-[#f1fbf4] flex items-center justify-end text-[10px] border-b border-border/40">
               <select 
                 value={voiceType} 
                 onChange={(e) => setVoiceType(e.target.value as VoiceType)}

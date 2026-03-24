@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import type { MockUser } from '@/lib/store';
+
+interface AppUser {
+  name?: string;
+  role?: string;
+  phone?: string;
+  afyaId?: string;
+}
 
 export type Language = 'en' | 'sw';
 export type VoiceType = 'boy' | 'man' | 'lady';
@@ -14,7 +20,7 @@ interface MsaidiziState {
   currentStep: number;
   totalSteps: number;
   isOpen: boolean;
-  user: MockUser | null;
+  user: AppUser | null;
   currentMessage: { en: string; sw: string } | null;
   tourActive: boolean;
   
@@ -23,9 +29,9 @@ interface MsaidiziState {
   setVoiceType: (type: VoiceType) => void;
   setTheme: (theme: Theme) => void;
   setIsOpen: (isOpen: boolean) => void;
-  setUser: (user: MockUser | null) => void;
+  setUser: (user: AppUser | null) => void;
   setTotalSteps: (steps: number) => void;
-  speak: (textEn: string, textSw: string, autoCloseMs?: number) => void;
+  speak: (textEn: string, textSw: string, autoCloseMs?: number, onDone?: () => void) => void;
   nextStep: () => void;
   startTour: () => void;
   endTour: () => void;
@@ -53,7 +59,7 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
   );
   const [isOpen, setIsOpen] = useState(false);
   
-  const [user, setUser] = useState<MockUser | null>(() => {
+  const [user, setUser] = useState<AppUser | null>(() => {
     const saved = localStorage.getItem('ms_user');
     return saved ? JSON.parse(saved) : null;
   });
@@ -64,8 +70,43 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
   const [currentMessage, setCurrentMessage] = useState<{ en: string; sw: string } | null>(null);
   
   const autoCloseTimeoutRef = useRef<number | null>(null);
+  const voicesRetryTimeoutRef = useRef<number | null>(null);
+  const speakSessionRef = useRef(0);
+  const speechUnlockedRef = useRef(false);
+  const pendingSpeakRef = useRef<(() => void) | null>(null);
   const [activeView, setActiveView] = useState('landing');
   const [activeRole, setActiveRole] = useState('');
+
+  useEffect(() => {
+    const synth = window.speechSynthesis;
+    const warmup = () => synth.getVoices();
+    const unlock = () => {
+      speechUnlockedRef.current = true;
+      synth.resume();
+      if (pendingSpeakRef.current) {
+        const run = pendingSpeakRef.current;
+        pendingSpeakRef.current = null;
+        run();
+      }
+    };
+
+    warmup();
+    synth.addEventListener('voiceschanged', warmup);
+    window.addEventListener('pointerdown', unlock, { passive: true });
+    window.addEventListener('keydown', unlock);
+    window.addEventListener('touchstart', unlock, { passive: true });
+
+    return () => {
+      synth.removeEventListener('voiceschanged', warmup);
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+      if (voicesRetryTimeoutRef.current) {
+        window.clearTimeout(voicesRetryTimeoutRef.current);
+        voicesRetryTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Apply theme to <html> element
   useEffect(() => {
@@ -101,7 +142,16 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [language, voiceEnabled, voiceType, user]);
 
-  const speak = (textEn: string, textSw: string, autoCloseMs?: number) => {
+  const speak = (textEn: string, textSw: string, autoCloseMs?: number, onDone?: () => void) => {
+    speakSessionRef.current += 1;
+    const sessionId = speakSessionRef.current;
+    let doneCalled = false;
+    const finish = () => {
+      if (doneCalled || sessionId !== speakSessionRef.current) return;
+      doneCalled = true;
+      if (onDone) onDone();
+    };
+
     setCurrentMessage({ en: textEn, sw: textSw });
     setIsOpen(true);
     
@@ -111,73 +161,109 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
 
     if (autoCloseMs) {
       autoCloseTimeoutRef.current = window.setTimeout(() => {
+        if (sessionId !== speakSessionRef.current) return;
         setIsOpen(false);
         setCurrentMessage(null);
+        finish();
       }, autoCloseMs);
     }
     
-    if (!voiceEnabled) return;
-    window.speechSynthesis.cancel();
-    
+    if (!voiceEnabled || !('speechSynthesis' in window)) return;
+
     // Strip emoji so TTS doesn't read them as descriptions like "smile emoji"
     const rawText = language === 'en' ? textEn : textSw;
     // eslint-disable-next-line no-misleading-character-class
     const text = rawText.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{FE0F}]/gu, '').replace(/\s{2,}/g, ' ').trim();
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    const voices = window.speechSynthesis.getVoices();
-    const langMatch = language === 'sw' ? 'sw' : 'en';
-    
-    // Filter voices by language
-    const availableVoices = voices.filter(v => v.lang.startsWith(langMatch));
-    let selectedVoice = availableVoices[0] || voices.find(v => v.lang.includes('en'));
 
-    // Voice personality selection with distinct characteristics
-    if (voiceType === 'boy') {
-      utterance.pitch = 1.4;  // Higher pitch for boy
-      utterance.rate = 1.15;  // Slightly faster for energetic boy voice
-      // Try to find a boy/child voice if available
-      const boyVoice = availableVoices.find(v => 
-        v.name.toLowerCase().includes('junior') || 
-        v.name.toLowerCase().includes('child') ||
-        v.name.toLowerCase().includes('boy')
-      );
-      if (boyVoice) selectedVoice = boyVoice;
-    } else if (voiceType === 'man') {
-      utterance.pitch = 0.75;  // Lower pitch for man
-      utterance.rate = 0.85;   // Slower for deeper man voice
-      // Try to find a male voice
-      const maleVoice = availableVoices.find(v => 
-        v.name.toLowerCase().includes('male') || 
-        v.name.toLowerCase().includes('david') ||
-        v.name.toLowerCase().includes('alex') ||
-        v.name.toLowerCase().includes('man')
-      );
-      if (maleVoice) selectedVoice = maleVoice;
-    } else { // lady
-      utterance.pitch = 1.15;  // Slightly elevated pitch for lady
-      utterance.rate = 1.0;    // Normal rate for lady voice
-      // Try to find a female voice
-      const femaleVoice = availableVoices.find(v => 
-        v.name.toLowerCase().includes('female') || 
-        v.name.toLowerCase().includes('zira') || 
-        v.name.toLowerCase().includes('samantha') ||
-        v.name.toLowerCase().includes('victoria') ||
-        v.name.toLowerCase().includes('woman') ||
-        v.name.toLowerCase().includes('lady')
-      );
-      if (femaleVoice) selectedVoice = femaleVoice;
+    const speakNow = () => {
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      synth.resume();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = synth.getVoices();
+      const langMatch = language === 'sw' ? 'sw' : 'en';
+      const availableVoices = voices.filter(v => v.lang.toLowerCase().startsWith(langMatch));
+      let selectedVoice = availableVoices[0] || voices.find(v => v.lang.toLowerCase().includes('en'));
+
+      if (voiceType === 'boy') {
+        utterance.pitch = 1.4;
+        utterance.rate = 1.15;
+        const boyVoice = availableVoices.find(v =>
+          v.name.toLowerCase().includes('junior') ||
+          v.name.toLowerCase().includes('child') ||
+          v.name.toLowerCase().includes('boy')
+        );
+        if (boyVoice) selectedVoice = boyVoice;
+      } else if (voiceType === 'man') {
+        utterance.pitch = 0.75;
+        utterance.rate = 0.85;
+        const maleVoice = availableVoices.find(v =>
+          v.name.toLowerCase().includes('male') ||
+          v.name.toLowerCase().includes('david') ||
+          v.name.toLowerCase().includes('alex') ||
+          v.name.toLowerCase().includes('man')
+        );
+        if (maleVoice) selectedVoice = maleVoice;
+      } else {
+        utterance.pitch = 1.15;
+        utterance.rate = 1.0;
+        const femaleVoice = availableVoices.find(v =>
+          v.name.toLowerCase().includes('female') ||
+          v.name.toLowerCase().includes('zira') ||
+          v.name.toLowerCase().includes('samantha') ||
+          v.name.toLowerCase().includes('victoria') ||
+          v.name.toLowerCase().includes('woman') ||
+          v.name.toLowerCase().includes('lady')
+        );
+        if (femaleVoice) selectedVoice = femaleVoice;
+      }
+
+      utterance.lang = language === 'sw' ? 'sw-KE' : 'en-US';
+      utterance.volume = 1;
+      utterance.onend = finish;
+      utterance.onerror = finish;
+      if (selectedVoice) utterance.voice = selectedVoice;
+
+      synth.speak(utterance);
+    };
+
+    const synth = window.speechSynthesis;
+    if (!speechUnlockedRef.current) {
+      speechUnlockedRef.current = true;
     }
 
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
+    if (synth.getVoices().length > 0) {
+      speakNow();
+      return;
     }
 
-    window.speechSynthesis.speak(utterance);
+    const onVoicesChanged = () => {
+      synth.removeEventListener('voiceschanged', onVoicesChanged);
+      speakNow();
+    };
+
+    synth.addEventListener('voiceschanged', onVoicesChanged);
+    if (voicesRetryTimeoutRef.current) {
+      window.clearTimeout(voicesRetryTimeoutRef.current);
+    }
+    voicesRetryTimeoutRef.current = window.setTimeout(() => {
+      synth.removeEventListener('voiceschanged', onVoicesChanged);
+      speakNow();
+      voicesRetryTimeoutRef.current = null;
+    }, 700);
   };
 
-  const nextStep = () => setCurrentStep(prev => prev + 1);
-  const startTour = () => { setTourActive(true); setCurrentStep(1); };
+  const nextStep = () => {
+    console.log('[Context] nextStep called - incrementing from currentStep');
+    setCurrentStep(prev => prev + 1);
+  };
+  const startTour = () => {
+    console.log('[Context] startTour called - enabling voice if needed, setting tourActive=true, currentStep=1');
+    if (!voiceEnabled) setVoiceEnabled(true);
+    setTourActive(true);
+    setCurrentStep(1);
+  };
   const endTour = () => {
     setTourActive(false);
     setCurrentStep(0);
