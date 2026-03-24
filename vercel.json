@@ -2,10 +2,5 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
-  "framework": "vite",
-  "env": [
-    "VITE_SUPABASE_URL",
-    "VITE_SUPABASE_PUBLISHABLE_KEY",
-    "VITE_GEMINI_API_KEY"
-  ]
+  "framework": "vite"
 }
