@@ -29,3 +29,7 @@ dist-ssr
 
 # Supabase temp
 supabase/.temp/
+DEPLOYMENT_SUMMARY.md
+DEPLOYMENT.md
+.vercel
+.env*.local
