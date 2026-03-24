@@ -8,11 +8,9 @@ import {
   Languages,
   Lock,
   MessageSquare,
-  Moon,
   Send,
   Settings,
   Shield,
-  SunMedium,
   Users,
 } from 'lucide-react';
 import { askRafikiAI, createAlert } from '@/lib/api';
@@ -50,6 +48,20 @@ type ShortcutCard = {
   tagClass: string;
   chevronClass: string;
 };
+
+interface TourStepView {
+  tab?: TabId;
+  pillar?: PillarId | null;
+  mlinziFeature?: MlinziFeature;
+}
+
+interface TourStep {
+  target: string;
+  en: string;
+  sw: string;
+  ms: number;
+  view?: TourStepView;
+}
 
 const heatCells: HeatCell[] = [
   {
@@ -150,7 +162,7 @@ const patientMessages = [
 ];
 
 const Index = () => {
-  const { language, setLanguage, theme, setTheme, setActiveRole, setActiveView, speak, tourActive, currentStep, totalSteps, setTotalSteps, nextStep, startTour, endTour } = useMsaidizi();
+  const { language, setLanguage, setActiveRole, setActiveView, speak, tourActive, currentStep, totalSteps, setTotalSteps, nextStep, startTour, endTour, tourBootReady } = useMsaidizi();
 
   const [tab, setTab] = useState<TabId>('home');
   const [pillar, setPillar] = useState<PillarId | null>(null);
@@ -169,7 +181,7 @@ const Index = () => {
   const [selectedHeatCell, setSelectedHeatCell] = useState<HeatCell | null>(heatCells[0]);
   const [mlinziFeature, setMlinziFeature] = useState<MlinziFeature>('menu');
   const [emergencyState, setEmergencyState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
-  const [isDark, setIsDark] = useState(theme === 'dark');
+  const [isDark, setIsDark] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const tourTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
@@ -177,17 +189,7 @@ const Index = () => {
     setActiveRole('patient-demo');
   }, [setActiveRole]);
 
-  useEffect(() => {
-    const boot = window.setTimeout(() => {
-      setTab('home');
-      setPillar(null);
-      setTotalSteps(tourSteps.length);
-      startTour();
-    }, 100);
-
-    return () => window.clearTimeout(boot);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  
 
   useEffect(() => {
     if (tab === 'home' && pillar) {
@@ -196,21 +198,6 @@ const Index = () => {
     }
     setActiveView(tab);
   }, [tab, pillar, setActiveView]);
-
-  useEffect(() => {
-    const updateIsDark = () => {
-      setIsDark(theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches));
-    };
-
-    updateIsDark();
-    if (theme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      mq.addEventListener('change', updateIsDark);
-      return () => mq.removeEventListener('change', updateIsDark);
-    }
-
-    return undefined;
-  }, [theme]);
 
   useEffect(() => {
     setChatMessages((prev) => {
@@ -275,65 +262,120 @@ const Index = () => {
     ];
   }, [isDark, language]);
 
-  const tourSteps = useMemo(
+  const tourSteps = useMemo<TourStep[]>(
     () => [
       {
         target: 'header',
-        en: 'Welcome to Dawa Mashinani. This is your platform header showing the system status.',
-        sw: 'Karibu kwenye Dawa Mashinani. Hii ni sehemu ya juu ya jukwaa inayoonyesha hali ya mfumo.',
-        ms: 8200,
+        en: 'Welcome to Dawa Mashinani. This hero header shows your profile badge and live status.',
+        sw: 'Karibu kwenye Dawa Mashinani. Sehemu hii ya juu inaonyesha taarifa zako na hali ya mfumo.',
+        ms: 8000,
+        view: { tab: 'home', pillar: null, mlinziFeature: 'menu' },
       },
       {
         target: 'home-cards',
-        en: 'Below you will find the three core pillars of the platform.',
-        sw: 'Hapa chini utapata nguzo tatu muhimu za jukwaa.',
-        ms: 7600,
+        en: 'These entry cards take you into Rafiki AI, the Jirani network, and Mlinzi vitals.',
+        sw: 'Kadi hizi zinakupeleka kwa Rafiki AI, mtandao wa Jirani na Mlinzi wa vipimo.',
+        ms: 7800,
+        view: { tab: 'home', pillar: null },
       },
       {
         target: 'home-rafiki',
-        en: 'Rafiki is your AI health companion. Ask questions about symptoms, medicines, and health guidance.',
-        sw: 'Rafiki ni msaidizi wako wa afya wa AI. Uliza maswali kuhusu dalili, dawa, na mwongozo wa afya.',
-        ms: 8500,
+        en: 'Tap Ask Rafiki to chat with the AI assistant whenever you need quick guidance.',
+        sw: 'Gusa Ask Rafiki ili kuzungumza na msaidizi wa AI kila unapohitaji mwongozo wa haraka.',
+        ms: 7800,
+        view: { tab: 'home', pillar: null },
+      },
+      {
+        target: 'rafiki-detail',
+        en: 'Inside Rafiki you can review previous answers and send a new health question instantly.',
+        sw: 'Ndani ya Rafiki unaweza kuona majibu ya awali na kutuma swali jipya la afya mara moja.',
+        ms: 8600,
+        view: { tab: 'home', pillar: 'rafiki' },
       },
       {
         target: 'home-jirani',
-        en: 'Jirani connects you with trusted community health workers and emergency responders nearby.',
-        sw: 'Jirani inakuunganisha na wahudumu wa afya wa jamii na waokoaji wa dharura wanaokuuzunguka.',
-        ms: 8500,
+        en: 'The Jirani card opens a list of trusted community responders around you.',
+        sw: 'Kadi ya Jirani inafungua orodha ya wahudumu wa jamii wanaokuuzunguka.',
+        ms: 7800,
+        view: { tab: 'home', pillar: null },
+      },
+      {
+        target: 'jirani-detail',
+        en: 'In Jirani you can browse contacts and trigger an emergency alert if you need help.',
+        sw: 'Ndani ya Jirani unaweza kuona mawasiliano na kutuma onyo la dharura ukihitaji msaada.',
+        ms: 9000,
+        view: { tab: 'home', pillar: 'jirani' },
       },
       {
         target: 'home-mlinzi',
-        en: 'Mlinzi lets you track vital signs with a heatmap view and an upcoming vitals scanner tool.',
-        sw: 'Mlinzi inakuruhusu kufuatilia ishara muhimu na kuona ramani ya hatari iliyokuja.',
-        ms: 8500,
+        en: "The Mlinzi card keeps watch over vitals and the Murang'a risk map.",
+        sw: "Kadi ya Mlinzi hufuatilia vipimo muhimu na ramani ya hatari ya Murang'a.",
+        ms: 7800,
+        view: { tab: 'home', pillar: null },
+      },
+      {
+        target: 'mlinzi-detail',
+        en: 'Inside Mlinzi you can switch tools, capture readings, and inspect the live heatmap.',
+        sw: 'Ndani ya Mlinzi unaweza kubadili zana, kurekodi vipimo, na kuangalia ramani ya moto.',
+        ms: 9000,
+        view: { tab: 'home', pillar: 'mlinzi', mlinziFeature: 'heatmap' },
       },
       {
         target: 'nav-home',
-        en: 'This is your Home button. Use it to return to the main dashboard anytime.',
-        sw: 'Hii ni kitufe cha Home. Inatumia kurudi kwenye dashibodi kuu wakati wowote.',
-        ms: 7800,
+        en: 'Use the Home icon below to jump back to the dashboard at any time.',
+        sw: 'Tumia ikoni ya Home hapo chini kurudi kwenye dashibodi wakati wowote.',
+        ms: 7200,
+        view: { tab: 'home', pillar: null },
       },
       {
         target: 'nav-messages',
-        en: 'Messages shows all patient notifications, reminders, and updates from the platform.',
-        sw: 'Messages inaonyesha taarifa zote za mgonjwa, vikumbusho, na sasisho kutoka jukwaa.',
+        en: 'Messages keeps alerts, reminders, and frontline guidance from the platform.',
+        sw: 'Messages huhifadhi arifa, vikumbusho na mwongozo wa majukumu kutoka jukwaa.',
         ms: 8200,
+        view: { tab: 'messages' },
+      },
+      {
+        target: 'messages-panel',
+        en: 'This panel streams the latest notifications for your patients.',
+        sw: 'Sehemu hii inaleta taarifa za hivi karibuni za wagonjwa wako.',
+        ms: 8500,
+        view: { tab: 'messages' },
       },
       {
         target: 'nav-settings',
-        en: 'Settings lets you change your language between English and Swahili, and adjust the theme.',
-        sw: 'Settings inakuruhusu kubadili lugha kati ya Kiingereza na Kiswahili, na kubadili mandhari.',
-        ms: 8500,
+        en: 'Settings is where you change language or the Msaidizi voice.',
+        sw: 'Sehemu ya Settings ndiyo unabadilisha lugha au sauti ya Msaidizi.',
+        ms: 8200,
+        view: { tab: 'settings' },
+      },
+      {
+        target: 'settings-panel',
+        en: 'Update preferences here to tailor the experience to your workflow.',
+        sw: 'Sasisha mapendeleo hapa ili ulingane na namna unavyofanya kazi.',
+        ms: 8300,
+        view: { tab: 'settings' },
       },
       {
         target: 'tour-end',
-        en: 'Great! You are now ready to explore Dawa Mashinani. Start by asking Rafiki a health question.',
-        sw: 'Nzuri! Sasa uko tayari kuchimba Dawa Mashinani. Anza kwa kuuliza Rafiki swali la afya.',
+        en: 'Great! You now know every section. Msaidizi will hide until you need help again.',
+        sw: 'Nzuri! Sasa unajua kila sehemu. Msaidizi atajificha hadi utakapohitaji msaada tena.',
         ms: 9000,
+        view: { tab: 'home', pillar: null, mlinziFeature: 'menu' },
       },
     ],
     []
   );
+
+  useEffect(() => {
+    if (!tourBootReady) return;
+    // UI setup only — the intro speak is called directly from the icon click handler
+    // so it runs inside a user gesture and the browser allows audio playback
+    setTab('home');
+    setPillar(null);
+    setMlinziFeature('menu');
+    setTotalSteps(tourSteps.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourBootReady]);
 
   const tourStep = tourSteps[currentStep - 1] ?? null;
 
@@ -341,6 +383,22 @@ const Index = () => {
 
   useEffect(() => {
     if (!tourActive || currentStep < 1 || !tourStep) return;
+
+    if (tourStep.view) {
+      if (tourStep.view.tab) {
+        setTab(tourStep.view.tab);
+      }
+
+      if (Object.prototype.hasOwnProperty.call(tourStep.view, 'pillar')) {
+        setPillar(tourStep.view.pillar ?? null);
+      } else if (tourStep.view.tab && tourStep.view.tab !== 'home') {
+        setPillar(null);
+      }
+
+      if (tourStep.view.mlinziFeature) {
+        setMlinziFeature(tourStep.view.mlinziFeature);
+      }
+    }
 
     // Clear any existing timer
     if (tourTimerRef.current) {
@@ -426,7 +484,10 @@ const Index = () => {
   };
 
   return (
-    <div className={`min-h-[100dvh] ${isDark ? 'bg-[#0d1117] text-slate-100' : 'bg-[#f6f5ef] text-[#1f140c]'} flex flex-col`}>
+    <div
+      data-tour="tour-end"
+      className={`min-h-[100dvh] ${isDark ? 'bg-[#0d1117] text-slate-100' : 'bg-[#f6f5ef] text-[#1f140c]'} flex flex-col ${isTourTarget('tour-end') ? 'ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef]' : ''}`}
+    >
       <header data-tour="header" className={`px-4 pt-3 pb-1 ${isTourTarget('header') ? 'rounded-3xl ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef]' : ''}`}>
         <div className="mx-auto w-full max-w-4xl rounded-[24px] border border-[#d9e4d2] bg-white/95 px-4 py-3 shadow-[0_16px_40px_rgba(31,20,12,0.08)] lg:w-3/4">
           <div className="grid grid-cols-[56px_1fr_auto] items-center gap-4 sm:grid-cols-[64px_1fr_auto]">
@@ -435,7 +496,10 @@ const Index = () => {
             </div>
             <div className="text-center">
               <p className="text-xs font-semibold tracking-[0.6em] text-[#0c4c31]">DAWA</p>
-              <p className="-mt-1 text-base font-black tracking-[0.52em] text-[#163726]">MASHINANI</p>
+              <div className="flex flex-col items-center gap-0.5">
+                <p className="-mt-1 text-base font-black tracking-[0.52em] text-[#163726]">MASHINANI</p>
+                <span className="inline-block rounded-full bg-gradient-to-r from-[#f59e0b] to-[#ec4899] px-2.5 py-0.5 text-[8px] font-bold text-white tracking-widest uppercase shadow-sm">beta</span>
+              </div>
             </div>
             <div className="rounded-full border border-[#8bc196] bg-[#e8f6ea] px-4 py-1 text-[11px] font-semibold text-[#2f7f43] shadow-sm">Online</div>
           </div>
@@ -485,7 +549,10 @@ const Index = () => {
             <button onClick={() => setPillar(null)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a25125]"><ArrowLeft className="w-3.5 h-3.5" />{language === 'sw' ? 'Rudi main' : 'Back to main'}</button>
 
             {pillar === 'rafiki' && (
-              <div className="rounded-[32px] border border-[#e9d3c0] bg-white/95 p-4 shadow-sm">
+              <div
+                data-tour="rafiki-detail"
+                className={`rounded-[32px] border border-[#e9d3c0] bg-white/95 p-4 shadow-sm ${isTourTarget('rafiki-detail') ? 'ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef]' : ''}`}
+              >
                 <p className="text-[11px] uppercase tracking-[0.3em] text-[#9a6f4b]">Rafiki AI consultation</p>
                 <div ref={chatScrollRef} className="mt-3 space-y-2 max-h-[46dvh] overflow-y-auto pr-1">
                   {chatMessages.map((msg, idx) => (
@@ -502,7 +569,10 @@ const Index = () => {
             )}
 
             {pillar === 'jirani' && (
-              <div id="tour-jirani-alert" className={`grid gap-5 lg:grid-cols-[1.1fr_0.9fr] ${isTourTarget('jirani-alert') ? 'rounded-3xl ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef]' : ''}`}>
+              <div
+                data-tour="jirani-detail"
+                className={`grid gap-5 lg:grid-cols-[1.1fr_0.9fr] ${isTourTarget('jirani-detail') ? 'rounded-3xl ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef]' : ''}`}
+              >
                 <div className="rounded-[32px] border border-[#cde5f6] bg-white/95 p-5 shadow-sm">
                   <p className="text-[11px] uppercase tracking-[0.3em] text-[#3e7aa0]">Jirani Network</p>
                   <div className="mt-3 space-y-3">
@@ -527,7 +597,10 @@ const Index = () => {
             )}
 
             {pillar === 'mlinzi' && (
-              <div className="rounded-[32px] border border-[#e6e1c9] bg-white/95 p-5 shadow-sm space-y-4">
+              <div
+                data-tour="mlinzi-detail"
+                className={`rounded-[32px] border border-[#e6e1c9] bg-white/95 p-5 shadow-sm space-y-4 ${isTourTarget('mlinzi-detail') ? 'ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef]' : ''}`}
+              >
                 <p className="text-[11px] uppercase tracking-[0.3em] text-[#7d6f2a]">Mlinzi</p>
 
                 {(mlinziFeature === 'menu' || mlinziFeature === 'scanner') && (
@@ -616,8 +689,12 @@ const Index = () => {
           </div>
         )}
 
-        {tab === 'messages' && (
-          <div id="tour-messages-panel" className={`mx-auto w-full max-w-4xl space-y-3 pt-4 pb-2 lg:w-3/4 ${isTourTarget('messages-panel') ? 'rounded-3xl ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef] p-2' : ''}`}>
+                {tab === 'messages' && (
+                  <div
+                    id="tour-messages-panel"
+                    data-tour="messages-panel"
+                    className={`mx-auto w-full max-w-4xl space-y-3 pt-4 pb-2 lg:w-3/4 ${isTourTarget('messages-panel') ? 'rounded-3xl ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef] p-2' : ''}`}
+                  >
             {patientMessages.map((msg) => (
               <div key={msg.title} className="rounded-2xl border border-[#d8eadc] bg-white/95 px-4 py-3 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -630,17 +707,18 @@ const Index = () => {
           </div>
         )}
 
-        {tab === 'settings' && (
-          <div id="tour-settings-panel" className={`mx-auto w-full max-w-4xl space-y-3 pt-4 pb-2 lg:w-3/4 ${isTourTarget('settings-panel') ? 'rounded-3xl ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef] p-2' : ''}`}>
+                {tab === 'settings' && (
+                  <div
+                    id="tour-settings-panel"
+                    data-tour="settings-panel"
+                    className={`mx-auto w-full max-w-4xl space-y-3 pt-4 pb-2 lg:w-3/4 ${isTourTarget('settings-panel') ? 'rounded-3xl ring-4 ring-[#f59e0b] ring-offset-2 ring-offset-[#f6f5ef] p-2' : ''}`}
+                  >
             <div className="rounded-[28px] border border-[#d4e3d8] bg-white/95 backdrop-blur-sm p-4 shadow-sm space-y-4">
               <div className="flex items-center justify-between rounded-2xl border border-[#dce8de] px-3 py-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-[#244431]"><Languages className="h-4 w-4" />{language === 'sw' ? 'Lugha' : 'Language'}</div>
                 <button onClick={() => setLanguage(language === 'en' ? 'sw' : 'en')} className="rounded-full border border-[#cfe4d6] px-3 py-1 text-xs font-semibold bg-[#f2fbf6]">{language === 'en' ? 'EN' : 'SW'}</button>
               </div>
-              <div className="flex items-center justify-between rounded-2xl border border-[#dce8de] px-3 py-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-[#244431]">{theme === 'dark' ? <Moon className="h-4 w-4" /> : <SunMedium className="h-4 w-4" />}{language === 'sw' ? 'Mandhari' : 'Theme'}</div>
-                <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="rounded-full border border-[#cfe4d6] px-3 py-1 text-xs font-semibold bg-[#f2fbf6]">{theme === 'dark' ? 'Dark' : 'Light'}</button>
-              </div>
+
             </div>
           </div>
         )}
@@ -719,11 +797,9 @@ import {
   Home,
   Languages,
   MessageSquare,
-  Moon,
   Send,
   Settings,
   Shield,
-  SunMedium,
   Users,
 } from 'lucide-react';
 import { askRafikiAI, createAlert } from '@/lib/api';
@@ -842,7 +918,7 @@ const sampleMessages = [
 ];
 
 const Index = () => {
-  const { language, setLanguage, theme, setTheme, setActiveRole, setActiveView } = useMsaidizi();
+  const { language, setLanguage, setActiveRole, setActiveView } = useMsaidizi();
 
   const [tab, setTab] = useState<TabId>('home');
   const [pillar, setPillar] = useState<PillarId | null>(null);
@@ -1282,18 +1358,7 @@ const Index = () => {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-[#dce8de] px-3 py-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-[#244431]">
-                  {theme === 'dark' ? <Moon className="h-4 w-4" /> : <SunMedium className="h-4 w-4" />}
-                  {language === 'sw' ? 'Mandhari' : 'Theme'}
-                </div>
-                <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="rounded-full border border-[#cfe4d6] px-3 py-1 text-xs font-semibold bg-[#f2fbf6]"
-                >
-                  {theme === 'dark' ? 'Dark' : 'Light'}
-                </button>
-              </div>
+
             </div>
 
             <div className="rounded-[28px] border border-[#d4e3d8] bg-white/95 backdrop-blur-sm p-4 text-xs text-[#4c5a4f] shadow-sm">
@@ -1406,13 +1471,11 @@ import {
   Home,
   Languages,
   MessageSquare,
-  Moon,
   Pill,
   Send,
   Settings,
   Shield,
   Stethoscope,
-  SunMedium,
   Users,
 } from 'lucide-react';
 import { askRafikiAI, createAlert } from '@/lib/api';
@@ -1420,18 +1483,9 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { useMsaidizi } from '@/components/msaidizi/MsaidiziProvider';
 
-
-    if (theme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      mq.addEventListener('change', updateIsDark);
-      return () => mq.removeEventListener('change', updateIsDark);
-    }
-  }, [theme]);
-
-  const mobileShortcutCards = useMemo(
-    () => {
-      const rafikiIsDark = theme === 'dark';
-      const rafikiSubtitleEn = 'Chat with your AI companion for fast guidance.';
+const mobileShortcutCards = useMemo(
+  () => {
+    const rafikiSubtitleEn = 'Chat with your AI companion for fast guidance.';
       const rafikiSubtitleSw = 'Zungumza na msaidizi wako wa afya wa AI kwa msaada wa haraka.';
       const jiraniSubtitleEn = 'See trusted neighbours, CHVs and responders around you.';
       const jiraniSubtitleSw = 'Tazama majirani, wahudumu wa jamii na waokoaji wanaokuuzunguka.';
@@ -1486,11 +1540,8 @@ import { useMsaidizi } from '@/components/msaidizi/MsaidiziProvider';
     const updateIsDark = () => {
       setIsDark(theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches));
     };
-
-    updateIsDark();
   const mobileShortcutCards = useMemo(
     () => {
-      const rafikiIsDark = theme === 'dark';
       const rafikiSubtitleEn = 'Chat with your AI companion for fast guidance.';
       const rafikiSubtitleSw = 'Zungumza na msaidizi wako wa afya wa AI kwa msaada wa haraka.';
       const jiraniSubtitleEn = 'See trusted neighbours, CHVs and responders around you.';
@@ -2170,17 +2221,7 @@ import { useMsaidizi } from '@/components/msaidizi/MsaidiziProvider';
                       {voiceEnabled ? 'On' : 'Off'}
                     </button>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-[#22362b]">
-                      {theme === 'dark' ? <Moon className="w-4 h-4" /> : <SunMedium className="w-4 h-4" />} Theme
-                    </div>
-                    <button
-                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                      className="rounded-full border border-[#cfe4d6] px-3 py-1 text-xs font-semibold bg-[#f2fbf6]"
-                    >
-                      {theme === 'dark' ? 'Dark' : 'Light'}
-                    </button>
-                  </div>
+
                 </div>
 
                 <div className="rounded-[28px] border border-[#d4e3d8] bg-white/95 backdrop-blur-sm p-4 text-xs text-[#4c5a4f] shadow-sm">

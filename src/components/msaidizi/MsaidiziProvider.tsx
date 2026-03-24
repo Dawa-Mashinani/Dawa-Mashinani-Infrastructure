@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 
 interface AppUser {
   name?: string;
@@ -9,25 +9,25 @@ interface AppUser {
 
 export type Language = 'en' | 'sw';
 export type VoiceType = 'boy' | 'man' | 'lady';
-export type Theme = 'light' | 'dark' | 'system';
 
 interface MsaidiziState {
   enabled: boolean;
   language: Language;
   voiceEnabled: boolean;
   voiceType: VoiceType;
-  theme: Theme;
   currentStep: number;
   totalSteps: number;
   isOpen: boolean;
   user: AppUser | null;
   currentMessage: { en: string; sw: string } | null;
   tourActive: boolean;
+  tourVisible: boolean;
+  tourBootReady: boolean;
+  setTourBootReady: (ready: boolean) => void;
   
   setLanguage: (lang: Language) => void;
   setVoiceEnabled: (enabled: boolean) => void;
   setVoiceType: (type: VoiceType) => void;
-  setTheme: (theme: Theme) => void;
   setIsOpen: (isOpen: boolean) => void;
   setUser: (user: AppUser | null) => void;
   setTotalSteps: (steps: number) => void;
@@ -48,14 +48,16 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
   const [language, setLanguage] = useState<Language>(
     (localStorage.getItem('ms_lang') as Language) || 'en'
   );
-  const [voiceEnabled, setVoiceEnabled] = useState(
+  const [voiceEnabled, setVoiceEnabledState] = useState(
     localStorage.getItem('ms_voice') !== 'false'
   );
+  const voiceEnabledRef = useRef(voiceEnabled);
+  const setVoiceEnabled = useCallback((val: boolean) => {
+    voiceEnabledRef.current = val;
+    setVoiceEnabledState(val);
+  }, []);
   const [voiceType, setVoiceType] = useState<VoiceType>(
     (localStorage.getItem('ms_voicetype') as VoiceType) || 'lady'
-  );
-  const [theme, setThemeState] = useState<Theme>(
-    (localStorage.getItem('ms_theme') as Theme) || 'light'
   );
   const [isOpen, setIsOpen] = useState(false);
   
@@ -67,6 +69,8 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [totalSteps, setTotalSteps] = useState(0);
   const [tourActive, setTourActive] = useState(false);
+  const [tourVisible, setTourVisible] = useState(true);
+  const [tourBootReady, setTourBootReady] = useState(false);
   const [currentMessage, setCurrentMessage] = useState<{ en: string; sw: string } | null>(null);
   
   const autoCloseTimeoutRef = useRef<number | null>(null);
@@ -108,28 +112,11 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Apply theme to <html> element
+  // Force light mode only
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      // system
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.toggle('dark', prefersDark);
-      const handler = (e: MediaQueryListEvent) => root.classList.toggle('dark', e.matches);
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      mq.addEventListener('change', handler);
-      return () => mq.removeEventListener('change', handler);
-    }
-  }, [theme]);
-
-  const setTheme = (t: Theme) => {
-    setThemeState(t);
-    localStorage.setItem('ms_theme', t);
-  };
+    root.classList.remove('dark');
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('ms_lang', language);
@@ -142,7 +129,7 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [language, voiceEnabled, voiceType, user]);
 
-  const speak = (textEn: string, textSw: string, autoCloseMs?: number, onDone?: () => void) => {
+  const speak = useCallback((textEn: string, textSw: string, autoCloseMs?: number, onDone?: () => void) => {
     speakSessionRef.current += 1;
     const sessionId = speakSessionRef.current;
     let doneCalled = false;
@@ -168,7 +155,7 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
       }, autoCloseMs);
     }
     
-    if (!voiceEnabled || !('speechSynthesis' in window)) return;
+    if (!voiceEnabledRef.current || !('speechSynthesis' in window)) return;
 
     // Strip emoji so TTS doesn't read them as descriptions like "smile emoji"
     const rawText = language === 'en' ? textEn : textSw;
@@ -177,8 +164,6 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
 
     const speakNow = () => {
       const synth = window.speechSynthesis;
-      synth.cancel();
-      synth.resume();
 
       const utterance = new SpeechSynthesisUtterance(text);
       const voices = synth.getVoices();
@@ -225,7 +210,19 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
       utterance.onerror = finish;
       if (selectedVoice) utterance.voice = selectedVoice;
 
-      synth.speak(utterance);
+      // Chrome fix: cancel() right before speak() silently drops the utterance.
+      // If nothing is playing, speak directly (preserves user-gesture context).
+      // If something IS playing, cancel first, then speak after a small delay.
+      if (synth.speaking || synth.pending) {
+        synth.cancel();
+        window.setTimeout(() => {
+          synth.resume();
+          synth.speak(utterance);
+        }, 80);
+      } else {
+        synth.resume();
+        synth.speak(utterance);
+      }
     };
 
     const synth = window.speechSynthesis;
@@ -252,31 +249,35 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
       speakNow();
       voicesRetryTimeoutRef.current = null;
     }, 700);
-  };
+  }, [language, voiceType]);
 
-  const nextStep = () => setCurrentStep(prev => prev + 1);
-  const startTour = () => {
-    if (!voiceEnabled) setVoiceEnabled(true);
+  const nextStep = useCallback(() => setCurrentStep(prev => prev + 1), []);
+  const startTour = useCallback(() => {
+    setVoiceEnabled(true);
+    setTourVisible(true);
     setTourActive(true);
     setCurrentStep(1);
-  };
-  const endTour = () => {
+  }, []);
+  const endTour = useCallback(() => {
+    speakSessionRef.current += 1;
+    pendingSpeakRef.current = null;
     setTourActive(false);
     setCurrentStep(0);
     setIsOpen(false);
     setCurrentMessage(null);
     setTotalSteps(0);
+    setTourVisible(false);
     window.speechSynthesis.cancel();
     if (autoCloseTimeoutRef.current) {
       window.clearTimeout(autoCloseTimeoutRef.current);
       autoCloseTimeoutRef.current = null;
     }
-  };
+  }, []);
 
   return (
     <MsaidiziContext.Provider value={{
-      enabled, language, voiceEnabled, voiceType, theme, currentStep, totalSteps, isOpen, user, currentMessage, tourActive, activeView, activeRole,
-      setLanguage, setVoiceEnabled, setVoiceType, setTheme, setIsOpen, setUser, setTotalSteps, speak, nextStep, startTour, endTour, setActiveView, setActiveRole
+      enabled, language, voiceEnabled, voiceType, currentStep, totalSteps, isOpen, user, currentMessage, tourActive, tourVisible, tourBootReady, activeView, activeRole,
+      setLanguage, setVoiceEnabled, setVoiceType, setIsOpen, setUser, setTotalSteps, speak, nextStep, startTour, endTour, setActiveView, setActiveRole, setTourBootReady
     }}>
       {children}
     </MsaidiziContext.Provider>

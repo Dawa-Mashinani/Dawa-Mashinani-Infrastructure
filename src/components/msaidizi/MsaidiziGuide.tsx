@@ -1,101 +1,79 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, VolumeX, X, Languages, ChevronRight } from 'lucide-react';
+import { Volume2, VolumeX, Languages } from 'lucide-react';
 import { useMsaidizi, type VoiceType } from './MsaidiziProvider';
 
-/* Contextual explanations keyed by active view in the no-login app */
-const CONTEXT_MAP: Record<string, { en: string; sw: string }> = {
-  home: {
-    en: 'You are on Home. Tap a pillar card to open Rafiki AI, Jirani Ledger, or Mlinzi Vitals.',
-    sw: 'Uko kwenye Nyumbani. Gusa kadi ya nguzo kufungua Rafiki AI, Jirani Ledger, au Mlinzi Vitals.'
-  },
-  rafiki: {
-    en: 'This is Rafiki AI. Ask symptoms, treatment questions, or triage guidance and get a quick response.',
-    sw: 'Hii ni Rafiki AI. Uliza dalili, maswali ya matibabu, au mwongozo wa triage upate jibu la haraka.'
-  },
-  jirani: {
-    en: 'This is Jirani Ledger. You can review trusted contacts and recent health records from Supabase.',
-    sw: 'Hii ni Jirani Ledger. Unaweza kuona mawasiliano ya kuaminika na rekodi za afya za hivi karibuni kutoka Supabase.'
-  },
-  mlinzi: {
-    en: 'This is Mlinzi Vitals. Save pulse, blood pressure, and temperature, then monitor your latest reading.',
-    sw: 'Hii ni Mlinzi Vitals. Hifadhi mpigo wa moyo, pressure ya damu, na joto, kisha fuatilia kipimo chako cha mwisho.'
-  },
-  messages: {
-    en: 'This is Messages. You can see live notification updates from emergency and response workflows.',
-    sw: 'Hii ni Messages. Unaweza kuona masasisho ya arifa za moja kwa moja kutoka mifumo ya dharura na mwitikio.'
-  },
-  settings: {
-    en: 'This is Settings. You can change language, assistant voice, and app theme quickly.',
-    sw: 'Hii ni Settings. Unaweza kubadilisha lugha, sauti ya msaidizi, na mandhari ya app kwa haraka.'
-  }
-};
-
 export default function MsaidiziGuide() {
-  const { 
-    isOpen, setIsOpen, language, setLanguage, 
+  const {
+    isOpen, language, setLanguage,
     voiceEnabled, setVoiceEnabled, voiceType, setVoiceType,
-    currentMessage, tourActive, endTour, currentStep, totalSteps, nextStep,
-    speak, activeView
+    currentMessage, tourActive, endTour, currentStep, totalSteps,
+    tourVisible, tourBootReady, setTourBootReady,
+    speak, startTour
   } = useMsaidizi();
 
   const toggleLang = () => setLanguage(language === 'en' ? 'sw' : 'en');
 
   const handleIconClick = () => {
-    if (!voiceEnabled) setVoiceEnabled(true);
-    window.speechSynthesis.resume();
-
-    // During tour: just toggle the panel
-    if (tourActive) {
-      setIsOpen(!isOpen);
-      return;
-    }
-    // Panel already open with context message → close it
-    if (isOpen && currentMessage) {
-      setIsOpen(false);
-      window.speechSynthesis.cancel();
-      return;
-    }
-    if (!activeView) {
+    if (!tourBootReady) {
+      // Force voice on (updates ref immediately) then speak in user-gesture context
+      setVoiceEnabled(true);
+      setTourBootReady(true);
       speak(
-        'Welcome to Dawa Mashinani. You are already inside the app. Tap any pillar card to begin.',
-        'Karibu Dawa Mashinani. Umeingia moja kwa moja ndani ya app. Gusa kadi yoyote ya nguzo kuanza.',
-        9000
+        "Jambo, I'm Msaidizi and I'll give you a quick tour on the Dawa Mashinani platform.",
+        'Jambo, mimi ni Msaidizi na nitakuelekeza kwa haraka kwenye jukwaa la Dawa Mashinani.',
+        9000,
+        () => { startTour(); }
       );
       return;
     }
-
-    const explanation = CONTEXT_MAP[activeView];
-    if (explanation) {
-      speak(explanation.en, explanation.sw, 12000);
-      return;
-    }
-
-    // Fallback
-    speak(
-      "Tap any section and I'll explain what you see.",
-      'Gusa sehemu yoyote nitakueleza unachoona.',
-      8000
-    );
+    // During tour: end immediately
+    endTour();
   };
-  
+
+  if (!tourVisible) return null;
+
   return (
     <>
-      {/* Floating Button — draggable, sits above BottomNav */}
+      {/* Floating Button */}
       <motion.button
         drag
         dragMomentum={false}
         dragConstraints={{ left: -300, right: 0, top: -500, bottom: 0 }}
         whileDrag={{ scale: 1.15, boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
         className="fixed bottom-[4.5rem] right-5 w-14 h-14 bg-white border-2 border-primary/30 rounded-full shadow-xl flex items-center justify-center z-[100] overflow-hidden touch-none"
-        animate={tourActive ? { scale: [1, 1.08, 1] } : {}}
+        animate={{ scale: [1, 1.08, 1] }}
         transition={{ repeat: Infinity, duration: 2 }}
         onClick={handleIconClick}
       >
-        {isOpen ? <X className="w-6 h-6 text-primary" /> : <img src="/Dawa-Mashinani-favicon.svg" alt="Msaidizi" className="w-9 h-9 object-contain" />}
+        <img src="/Dawa-Mashinani-favicon.svg" alt="Msaidizi" className="w-9 h-9 object-contain" />
       </motion.button>
 
-      {/* Guide Panel — above the floating button */}
+      {/* Speech bubble prompt before tour starts */}
+      <AnimatePresence>
+        {!tourBootReady && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85, x: 10 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.85, x: 10 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 22, delay: 0.4 }}
+            className="fixed bottom-[4.5rem] right-[5.5rem] z-[100] pointer-events-none"
+          >
+            <div className="relative bg-white border border-border/60 shadow-xl rounded-2xl px-4 py-3 max-w-[210px]">
+              <p className="text-[13px] font-medium text-foreground leading-snug">
+                {language === 'en'
+                  ? "Hi, I'm Msaidizi! 👋 Click me to start your guided tour."
+                  : 'Habari, mimi ni Msaidizi! 👋 Nibonyeze kuanza ziara yako.'}
+              </p>
+              {/* Triangle pointer towards the icon */}
+              <div className="absolute top-1/2 -translate-y-1/2 -right-2 w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-l-[8px] border-l-white" />
+              <div className="absolute top-1/2 -translate-y-1/2 -right-[9px] w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-l-[8px] border-l-border/60" style={{ zIndex: -1 }} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Guide Panel */}
       <AnimatePresence>
         {isOpen && currentMessage && (
           <motion.div
@@ -130,10 +108,10 @@ export default function MsaidiziGuide() {
               </div>
             </div>
 
-            {/* Quick settings row (Optional voice personality tweak) */}
+            {/* Quick settings row */}
             <div className="px-4 py-1.5 bg-[#f1fbf4] flex items-center justify-end text-[10px] border-b border-border/40">
-              <select 
-                value={voiceType} 
+              <select
+                value={voiceType}
                 onChange={(e) => setVoiceType(e.target.value as VoiceType)}
                 className="bg-transparent border-none text-muted-foreground cursor-pointer focus:ring-0 w-20 p-0 text-[10px]"
               >
@@ -147,34 +125,6 @@ export default function MsaidiziGuide() {
             <div className="p-5 bg-white text-[13px] text-foreground leading-relaxed min-h-[80px]">
               {language === 'en' ? currentMessage.en : currentMessage.sw}
             </div>
-
-            {/* Footer Actions */}
-            {tourActive && (
-              <div className="px-4 py-3 bg-white border-t border-border/60 flex items-center justify-between">
-                <button 
-                  onClick={endTour} 
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {language === 'en' ? 'Skip Tour' : 'Acha Ziara'}
-                </button>
-                {currentStep < totalSteps && (
-                  <button 
-                    onClick={nextStep}
-                    className="text-xs font-semibold text-primary flex items-center gap-1 hover:opacity-80 transition-opacity"
-                  >
-                    {language === 'en' ? 'Next' : 'Endelea'} <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {currentStep === totalSteps && (
-                  <button 
-                    onClick={endTour}
-                    className="text-xs font-semibold text-primary flex items-center gap-1 hover:opacity-80 transition-opacity"
-                  >
-                    {language === 'en' ? 'Finish' : 'Maliza'} <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
