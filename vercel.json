@@ -5,7 +5,7 @@
   "framework": "vite",
   "env": [
     "VITE_SUPABASE_URL",
-    "VITE_SUPABASE_ANON_KEY"
-  ],
-  "envPrefix": "VITE_"
+    "VITE_SUPABASE_PUBLISHABLE_KEY",
+    "VITE_GEMINI_API_KEY"
+  ]
 }
