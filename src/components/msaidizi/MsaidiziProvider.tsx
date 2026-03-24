@@ -254,12 +254,8 @@ export const MsaidiziProvider = ({ children }: { children: ReactNode }) => {
     }, 700);
   };
 
-  const nextStep = () => {
-    console.log('[Context] nextStep called - incrementing from currentStep');
-    setCurrentStep(prev => prev + 1);
-  };
+  const nextStep = () => setCurrentStep(prev => prev + 1);
   const startTour = () => {
-    console.log('[Context] startTour called - enabling voice if needed, setting tourActive=true, currentStep=1');
     if (!voiceEnabled) setVoiceEnabled(true);
     setTourActive(true);
     setCurrentStep(1);

@@ -179,7 +179,6 @@ const Index = () => {
 
   useEffect(() => {
     const boot = window.setTimeout(() => {
-      console.log('[Boot] Starting tour - tourSteps.length:', tourSteps.length);
       setTab('home');
       setPillar(null);
       setTotalSteps(tourSteps.length);
@@ -341,12 +340,7 @@ const Index = () => {
   const isTourTarget = (target: string) => tourActive && tourStep?.target === target;
 
   useEffect(() => {
-    if (!tourActive || currentStep < 1 || !tourStep) {
-      console.log('[Tour] Skipped - tourActive:', tourActive, 'currentStep:', currentStep, 'tourStep:', tourStep?.target);
-      return;
-    }
-
-    console.log('[Tour] Progressing to step', currentStep, 'target:', tourStep.target);
+    if (!tourActive || currentStep < 1 || !tourStep) return;
 
     // Clear any existing timer
     if (tourTimerRef.current) {
@@ -357,21 +351,16 @@ const Index = () => {
     window.setTimeout(() => {
       const el = document.querySelector<HTMLElement>(`[data-tour="${tourStep.target}"]`);
       if (el) {
-        console.log('[Tour] Scrolling to', tourStep.target);
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        console.warn('[Tour] Element not found:', tourStep.target);
       }
     }, 50);
 
     // Speak the tour step
     const speakDuration = Math.max(tourStep.ms - 1000, 1000);
-    console.log('[Tour] Speaking:', tourStep.en, 'duration:', speakDuration);
     speak(tourStep.en, tourStep.sw, speakDuration);
 
     // Auto-progress to next step
     tourTimerRef.current = window.setTimeout(() => {
-      console.log('[Tour] Timer fired for step', currentStep, '- will', currentStep >= tourSteps.length ? 'endTour' : 'nextStep');
       if (currentStep >= tourSteps.length) {
         endTour();
       } else {
