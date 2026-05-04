@@ -1,4 +1,4 @@
-Site is live in my server, access it via: https://unabated-shayne-mixible.ngrok-free.dev
+Site is live in my server, access it via: (https://dawa-dashinani-infrastructure.vercel.app/)
 
 Below you get the instructions to set up and run it in your own server 
 # Dawa-Mashinani-Infrastructure
